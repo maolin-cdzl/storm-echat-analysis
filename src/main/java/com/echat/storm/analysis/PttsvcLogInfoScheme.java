@@ -11,30 +11,36 @@ import org.apache.oro.text.regex.Perl5Matcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
  
-import org.apache.storm.spout.Scheme;
-import org.apache.storm.tuple.Fields;
-import org.apache.storm.tuple.Values;
-import org.apache.storm.spout.SchemeAsMultiScheme;
+import backtype.storm.spout.Scheme;
+import backtype.storm.tuple.Fields;
+import backtype.storm.tuple.Values;
+import backtype.storm.spout.SchemeAsMultiScheme;
 
+import java.util.Arrays;
+import java.util.List;
+import java.io.UnsupportedEncodingException;
 
-public class PttsvcLogInfoScheme extends Scheme {
-	public static class PttsvcLogInfoSchemaConstrants {
-		public static final String APP_FIELD = "app";
-		public static final String DATETIME_FIELD = "datetime";
-		public static final String LEVEL_FIELD = "level";
-		public static final String CONTENT_FIELD = "content";
+public class PttsvcLogInfoScheme implements Scheme {
 
-		public static final String PATTERN = "^(\\w+)\\s+(\\d{4}[/:\\.\\-\\\\]\\d{2}[/:\\.\\-\\\\]\\d{2}\\s\\d{2}:\\d{2}:\\d{2})\\.\\d+\\s(\\w+)[^\"]*\"([^\"]+)\"";
+	private static final String PATTERN = "^(\\w+)\\s+(\\d{4}[/:\\.\\-\\\\]\\d{2}[/:\\.\\-\\\\]\\d{2}\\s\\d{2}:\\d{2}:\\d{2})\\.\\d+\\s(\\w+)[^\"]*\"([^\"]+)\"";
 
+	private static final Logger log = LoggerFactory.getLogger(PttsvcLogInfoScheme.class);
+	private Pattern pattern = null;
+
+	public PttsvcLogInfoScheme() throws MalformedPatternException {
+		PatternCompiler compiler = new Perl5Compiler();
+		this.pattern = compiler.compile(PATTERN);
 	}
 
-
-	private static final Logger LOGGER = LoggerFactory.getLogger(PttsvcLogInfoScheme.class);
-	private PatternCompiler compiler = new Perl5Compiler();
-	private Pattern pattern = compiler.compile(PttsvcLogInfoSchemaConstrants.PATTERN);
-
 	public List<Object> deserialize(byte[] bytes) {
-		String line = new String(bytes,"UTF-8");
+		String line = null;
+		try {
+			line = new String(bytes,"UTF-8");
+		} catch( UnsupportedEncodingException e) {
+			log.warn("Unsupport tuple recved");
+			return null;
+		}
+
 		PatternMatcher pm = new Perl5Matcher();
 		if( pm.contains(line,pattern) ) {
 			MatchResult mr = pm.getMatch();
@@ -43,7 +49,8 @@ public class PttsvcLogInfoScheme extends Scheme {
 			String level = mr.group(3);
 			String content = mr.group(4);
 
-			return Arrays.asList(app,datetime,level,content);
+			log.debug("Kafka tuple: " + app + "\t" + datetime + "\t" + level + "\t" + content);
+			return new Values(app,datetime,level,content);
 		} else {
 			return null;
 		}
@@ -51,9 +58,9 @@ public class PttsvcLogInfoScheme extends Scheme {
 
 	public Fields getOutputFields() {
 		return new Fields(
-				PttsvcLogInfoSchemaConstrants.APP_FIELD,
-				PttsvcLogInfoSchemaConstrants.DATETIME_FIELD,
-				PttsvcLogInfoSchemaConstrants.LEVEL_FIELD,
-				PttsvcLogInfoSchemaConstrants.CONTENT_FIELD);
+				FieldsConstrants.APP_FIELD,
+				FieldsConstrants.DATETIME_FIELD,
+				FieldsConstrants.LEVEL_FIELD,
+				FieldsConstrants.CONTENT_FIELD);
 	}
 }
