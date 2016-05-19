@@ -1,0 +1,50 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.echat.test</groupId>
+  <artifactId>echat-test</artifactId>
+  <version>0.1.0</version>
+
+  <properties>
+  	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  
+  <dependencies>
+	<dependency>
+		<groupId>oro</groupId>
+		<artifactId>oro</artifactId>
+		<version>2.0.8</version>
+		<scope>compile</scope>
+	</dependency>
+  </dependencies>
+
+  <build>
+	  <plugins>
+		  <plugin>
+			  <groupId>org.apache.maven.plugins</groupId>
+			  <artifactId>maven-jar-plugin</artifactId>
+			  <configuration>
+				  <archive>
+					  <manifest>
+						  <mainClass>com.echat.test.Test</mainClass>
+					  </manifest>
+				  </archive>
+			  </configuration>
+		  </plugin>
+		  <plugin>
+			  <groupId>org.apache.maven.plugins</groupId>
+			  <artifactId>maven-shade-plugin</artifactId>
+			  <version>1.6</version>
+			  <executions>
+				  <execution>
+					  <phase>package</phase>
+					  <goals>
+						  <goal>shade</goal>
+					  </goals>
+				  </execution>
+			  </executions>
+		  </plugin>
+	  </plugins>
+  </build>
+  
+</project>
+
