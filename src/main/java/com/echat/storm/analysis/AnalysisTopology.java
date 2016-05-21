@@ -43,8 +43,8 @@ public class AnalysisTopology {
 		TopologyBuilder builder = new TopologyBuilder();
 		builder.setSpout(AnalysisTopologyConstranst.SPOUT_INPUT, new KafkaSpout(spoutConf),AnalysisTopologyConstranst.SPORT_INPUT_EXECUTORS); 
 		//builder.setBolt("word-splitter", new KafkaWordSplitter(), 2).shuffleGrouping("kafka-reader");
-		builder.setBolt(AnalysisTopologyConstranst.BOLT_ACTION, new PttsvcActionBolt(),AnalysisTopologyConstranst.BOLT_ACTION_EXECUTORS)
-			.setNumTasks(AnalysisTopologyConstranst.BOLT_ACTION_TASKS)
+		builder.setBolt(AnalysisTopologyConstranst.BOLT_LOG_SPLITER, new PttsvcLogSpliter(),AnalysisTopologyConstranst.BOLT_EVENT_EXECUTORS)
+			.setNumTasks(AnalysisTopologyConstranst.BOLT_EVENT_TASKS)
 			.fieldsGrouping(AnalysisTopologyConstranst.SPOUT_INPUT, new Fields(FieldsConstrants.APP_FIELD));
 
 		Config conf = new Config();
