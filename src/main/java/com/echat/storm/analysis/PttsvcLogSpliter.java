@@ -245,7 +245,7 @@ public class PttsvcLogSpliter extends BaseRichBolt {
 					FieldsConstrants.SW_FIELD,
 					FieldsConstrants.VALUE_FIELD
 					));
-		declarer.declareStream(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_MANAGE,new Fields(
+		declarer.declareStream(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_WORKSHEET,new Fields(
 					FieldsConstrants.APP_FIELD,
 					FieldsConstrants.DATETIME_FIELD,
 					FieldsConstrants.EVENT_FIELD,
