@@ -133,7 +133,10 @@ public class PttsvcLogSpliter extends BaseRichBolt {
 		}
 
 		if( report ) {
-			collector.emit(AnalysisTopologyConstranst.STREAM_APP_LOAD,input,new Values(c.lastReport));
+			collector.emit(AnalysisTopologyConstranst.STREAM_APP_LOAD,input,new Values(
+				app,
+				datetime,
+				c.lastReport));
 		}
 		collector.ack(input);
 	}
@@ -141,6 +144,8 @@ public class PttsvcLogSpliter extends BaseRichBolt {
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
 		declarer.declareStream(AnalysisTopologyConstranst.STREAM_APP_LOAD,new Fields(
+					FieldsConstrants.APP_FIELD,
+					FieldsConstrants.DATETIME_FIELD,
 					FieldsConstrants.APP_LOAD_FIELD
 					));
 
@@ -267,9 +272,14 @@ public class PttsvcLogSpliter extends BaseRichBolt {
 	private boolean parseEvent(Tuple input,AppTpsCounter c,String app,Date date,String content) {
 		boolean report = false;
 		
-		String ev = getEvent(content);
+		final String ev = getEvent(content);
 		if( ev != null ) {
 			processer.proc(ev,input,app,date,content);	
+			c.event(date,ev);
+		} else {
+			if( AnalysisTopologyConstranst.DEBUG ) {
+				log.info("No event: " + content);
+			}
 		}
 		report = c.info(date);
 		return report;

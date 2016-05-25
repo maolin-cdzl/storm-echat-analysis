@@ -272,7 +272,12 @@ public class LogSpliterProcesser {
 	public void proc(String ev,Tuple input,String app,Date date,String content) {
 		LogSpliterInterface p = processers.get(ev);
 		if( p != null ) {
+			if( AnalysisTopologyConstranst.DEBUG ) {
+				log.info("Proc event: " + ev);
+			}
 			p.process(this,input,app,date,content);
+		} else {
+			log.warn("Can not found processer for: " + ev);
 		}
 	}
 

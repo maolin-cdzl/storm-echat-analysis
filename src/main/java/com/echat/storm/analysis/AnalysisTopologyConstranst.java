@@ -1,6 +1,9 @@
 package com.echat.storm.analysis;
 
 public class AnalysisTopologyConstranst {
+	// debug
+	public static final boolean DEBUG = true;
+
 	// zookeeper
 	public static final String ZOOKEEPER_HOST_LIST = "base001.hdp.echat.com:2181,base002.hdp.echat.com:2181,base003.hdp.echat.com:2181";
 	public static final String ZOOKEEPER_ROOT = "/kafkastorm";
@@ -93,5 +96,11 @@ public class AnalysisTopologyConstranst {
 	
 	// worksheet
 	public static final String EVENT_WORKSHEET_POST = "POST";
+
+
+	// bolt
+	public static final String BOLT_STATISTICS_PERSIST = "bolt-stat-persist";
+	public static final String KEY_APP_LOAD_PREFIX = "appload-";
+	public static final long MAX_APP_LOAD_LENGTH = 3600;
 }
 

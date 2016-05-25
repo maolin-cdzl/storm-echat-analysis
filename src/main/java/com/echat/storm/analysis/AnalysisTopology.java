@@ -21,11 +21,12 @@ import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 
+import org.apache.storm.redis.common.config.JedisPoolConfig;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.oro.text.regex.MalformedPatternException;
-
 import java.util.Arrays;
 
 public class AnalysisTopology {
@@ -46,6 +47,12 @@ public class AnalysisTopology {
 		builder.setBolt(AnalysisTopologyConstranst.BOLT_LOG_SPLITER, new PttsvcLogSpliter(),AnalysisTopologyConstranst.BOLT_EVENT_EXECUTORS)
 			.setNumTasks(AnalysisTopologyConstranst.BOLT_EVENT_TASKS)
 			.fieldsGrouping(AnalysisTopologyConstranst.SPOUT_INPUT, new Fields(FieldsConstrants.APP_FIELD));
+
+
+		JedisPoolConfig poolConfig = new JedisPoolConfig.Builder().setHost("192.168.1.181").setPort(6379).build();
+		builder.setBolt(AnalysisTopologyConstranst.BOLT_STATISTICS_PERSIST,new StatisticsPersist(poolConfig))
+			.shuffleGrouping(AnalysisTopologyConstranst.BOLT_LOG_SPLITER,AnalysisTopologyConstranst.STREAM_APP_LOAD);
+
 
 		Config conf = new Config();
 		conf.setNumWorkers(AnalysisTopologyConstranst.TOPOLOGY_WORKERS);
