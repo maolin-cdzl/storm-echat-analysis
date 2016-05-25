@@ -38,7 +38,7 @@ public class StatisticsPersist extends AbstractRedisBolt {
 				final String key = AnalysisTopologyConstranst.KEY_APP_LOAD_PREFIX + app;
 				long len = jedisCommands.rpush(key,report);
 				if( len > AnalysisTopologyConstranst.MAX_APP_LOAD_LENGTH ) {
-					jedisCommands.ltrim(key,0,AnalysisTopologyConstranst.MAX_APP_LOAD_LENGTH - 1);
+					jedisCommands.ltrim(key,-AnalysisTopologyConstranst.MAX_APP_LOAD_LENGTH,-1);
 				}
 			} else {
 				log.warn("app or app-load fields missing");
