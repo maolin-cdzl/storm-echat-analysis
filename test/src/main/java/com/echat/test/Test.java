@@ -17,7 +17,7 @@ public class Test {
 
 	private static void testGrouping()  throws MalformedPatternException {
 		System.out.println("......testGrouping");
-		String PATTERN = "^(\\w+)\\s+(\\d{4}[/:\\.\\-\\\\]\\d{2}[/:\\.\\-\\\\]\\d{2}\\s\\d{2}:\\d{2}:\\d{2})\\.\\d+\\s(\\w+)[^\"]*\"([^\"]+)\"";
+		String PATTERN = "^(\\w+)\\s+(\\d{4}[/:\\.\\-\\\\]\\d{2}[/:\\.\\-\\\\]\\d{2}\\s\\d{2}:\\d{2}:\\d{2})\\.(\\d+)\\s(\\w+)[^\"]*\"([^\"]+)\"";
 		String line = "pttsvc004 2016/05/19 16:25:41.1853981196219	WARNING [commandhandler.cpp L: 145]	\"HANLE(5806) fwfilter: ptt.rr.RequestMic\"";
 
 		System.out.println(PATTERN);
@@ -30,11 +30,13 @@ public class Test {
 			MatchResult mr = pm.getMatch();
 			String app = mr.group(1);
 			String datetime = mr.group(2);
-			String level = mr.group(3);
-			String content = mr.group(4);
+			String timestamp = mr.group(3);
+			String level = mr.group(4);
+			String content = mr.group(5);
 
 			System.out.println(app);
 			System.out.println(datetime);
+			System.out.println(timestamp);
 			System.out.println(level);
 			System.out.println(content);
 		} else {

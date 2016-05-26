@@ -22,14 +22,17 @@ import java.io.UnsupportedEncodingException;
 
 public class PttsvcLogInfoScheme implements Scheme {
 
-	private static final String PATTERN = "^(\\w+)\\s+(\\d{4}[/:\\.\\-\\\\]\\d{2}[/:\\.\\-\\\\]\\d{2}\\s\\d{2}:\\d{2}:\\d{2})\\.\\d+\\s(\\w+)[^\"]*\"([^\"]+)\"";
+	private static final String PATTERN = "^(\\w+)\\s+(\\d{4}[/:\\.\\-\\\\]\\d{2}[/:\\.\\-\\\\]\\d{2}\\s\\d{2}:\\d{2}:\\d{2})\\.(\\d+)\\s(\\w+)[^\"]*\"([^\"]+)\"";
 
 	private static final Logger log = LoggerFactory.getLogger(PttsvcLogInfoScheme.class);
 	private Pattern pattern = null;
 
-	public PttsvcLogInfoScheme() throws MalformedPatternException {
+	public PttsvcLogInfoScheme() {
 		PatternCompiler compiler = new Perl5Compiler();
-		this.pattern = compiler.compile(PATTERN);
+		try {
+			this.pattern = compiler.compile(PATTERN);
+		} catch( MalformedPatternException e ) {
+		}
 	}
 
 	public List<Object> deserialize(byte[] bytes) {
@@ -46,11 +49,12 @@ public class PttsvcLogInfoScheme implements Scheme {
 			MatchResult mr = pm.getMatch();
 			String app = mr.group(1);
 			String datetime = mr.group(2);
-			String level = mr.group(3);
-			String content = mr.group(4);
+			String timestamp = mr.group(3);
+			String level = mr.group(4);
+			String content = mr.group(5);
 
 			log.debug("Kafka tuple: " + app + "\t" + datetime + "\t" + level + "\t" + content);
-			return new Values(app,datetime,level,content);
+			return new Values(app,datetime,timestamp,level,content);
 		} else {
 			return null;
 		}
@@ -60,7 +64,9 @@ public class PttsvcLogInfoScheme implements Scheme {
 		return new Fields(
 				FieldsConstrants.APP_FIELD,
 				FieldsConstrants.DATETIME_FIELD,
+				FieldsConstrants.TIMESTAMP_FIELD,
 				FieldsConstrants.LEVEL_FIELD,
-				FieldsConstrants.CONTENT_FIELD);
+				FieldsConstrants.CONTENT_FIELD
+				);
 	}
 }

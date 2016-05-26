@@ -1,8 +1,14 @@
 package com.echat.storm.analysis;
 
 public class FieldsConstrants {
+	public static final String ENTITY_FIELD = "entity";
+	public static final String TIME_START_FIELD = "tvstart";
+	public static final String TIME_END_FIELD = "tvend";
+	public static final String BUCKET_FIELD = "bucket";
+
 	public static final String APP_FIELD = "app";
 	public static final String DATETIME_FIELD = "datetime";
+	public static final String TIMESTAMP_FIELD = "ts";
 	public static final String LEVEL_FIELD = "level";
 	public static final String CONTENT_FIELD = "content";
 
@@ -26,4 +32,7 @@ public class FieldsConstrants {
 	public static final String TARGET_FIELD = "target";
 	public static final String TARGET_GOT_FIELD = "target-got";
 	public static final String TARGET_DENT_FIELD = "target-dent";
+
+	public static final String LOG_COUNT_FIELD = "log-count";
+	public static final String EVENT_COUNT_FIELD = "ev-count";
 }
