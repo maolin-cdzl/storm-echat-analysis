@@ -22,22 +22,24 @@ public class AnalysisTopologyConstranst {
 
 	public static final String BOLT_LOG_SPLITER = "log-spliter";
 	public static final int BOLT_EVENT_EXECUTORS = 3;
-	public static final int BOLT_EVENT_TASKS = TOPOLOGY_WORKERS * BOLT_EVENT_EXECUTORS;
+	public static final int BOLT_EVENT_TASKS = BOLT_EVENT_EXECUTORS;
 
-	public static final String STREAM_APP_LOAD = "app-load";
-	public static final String STREAM_WARN = "warn";
-	public static final String STREAM_ERROR = "error";
-	public static final String STREAM_FATAL = "fatal";
+	public static final String STREAM_APP_LOAD = "s-appload";
+	public static final String STREAM_WARN = "s-warn";
+	public static final String STREAM_ERROR = "s-error";
+	public static final String STREAM_FATAL = "s-fatal";
+	public static final String STREAM_INFO = "s-info";
+	public static final String STREAM_EVENT = "s-event";
 
-	public static final String STREAM_EVENT_GROUP_ONLINE = "event-online";
-	public static final String STREAM_EVENT_GROUP_LOGIN_FAILED = "event-login-failed";
-	public static final String STREAM_EVENT_GROUP_QUERY = "event-query";
-	public static final String STREAM_EVENT_GROUP_GROUP = "event-group";
-	public static final String STREAM_EVENT_GROUP_SPEAK = "event-speak";
-	public static final String STREAM_EVENT_GROUP_CALL = "event-call";
-	public static final String STREAM_EVENT_GROUP_PROFILE = "event-profile";
-	public static final String STREAM_EVENT_GROUP_MANAGE = "event-manage";
-	public static final String STREAM_EVENT_GROUP_WORKSHEET = "event-worksheet";
+	public static final String STREAM_EVENT_GROUP_ONLINE = "s-online";
+	public static final String STREAM_EVENT_GROUP_LOGIN_FAILED = "s-login-failed";
+	public static final String STREAM_EVENT_GROUP_QUERY = "s-query";
+	public static final String STREAM_EVENT_GROUP_GROUP = "s-group";
+	public static final String STREAM_EVENT_GROUP_SPEAK = "s-speak";
+	public static final String STREAM_EVENT_GROUP_CALL = "s-call";
+	public static final String STREAM_EVENT_GROUP_PROFILE = "s-profile";
+	public static final String STREAM_EVENT_GROUP_MANAGE = "s-manage";
+	public static final String STREAM_EVENT_GROUP_WORKSHEET = "s-worksheet";
 
 	// speak
 	public static final String EVENT_GET_MIC = "GET_MIC";

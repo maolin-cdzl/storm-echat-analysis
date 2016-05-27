@@ -8,6 +8,7 @@ import storm.trident.operation.TridentCollector;
 import java.util.Date;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Arrays;
 import java.text.ParseException;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.commons.lang.time.DateUtils;
@@ -53,7 +54,7 @@ class TimeBucketCounter {
 			Gson gson = new Gson();
 			final String counts = gson.toJson(counter);
 
-			log.info("emit " + entity + " from " + strBucket);
+			log.info("emit " + entity + " for " + strBucket);
 			collector.emit(new Values(entity,strBucket,counts));
 		}
 	}
@@ -83,6 +84,11 @@ public class TimeBucketAggregator extends BaseAggregator<HashMap<String,TimeBuck
 
 	@Override
     public void aggregate(HashMap<String,TimeBucketCounter> states, TridentTuple tuple, TridentCollector collector) {
+		if( !tuple.contains(_entityField) || !tuple.contains(_dateField) || !tuple.contains(_evField) ) {
+			log.warn("Can not found all need fields in: " + Arrays.toString(tuple.getFields().toList().toArray()));
+			return;
+		}
+
 		final String entity = tuple.getStringByField(_entityField);
 		final String datetime = tuple.getStringByField(_dateField);
 		final String ev = tuple.getStringByField(_evField);
@@ -102,6 +108,7 @@ public class TimeBucketAggregator extends BaseAggregator<HashMap<String,TimeBuck
 		TimeBucketCounter state = states.get(entity);
 		
 		if( state == null ) {
+			log.info("Create state for: " + entity + "." + ev);
 			state = new TimeBucketCounter(entity,date,ev);
 			states.put(entity,state);
 		} else {
@@ -109,6 +116,7 @@ public class TimeBucketAggregator extends BaseAggregator<HashMap<String,TimeBuck
 			if( state.bucket.equals(bucket) ) {
 				state.incCount(ev);
 			} else {
+				log.info(entity + " bucket jump from " + state.bucket + " to " + bucket);
 				state.report(collector);
 				state.reset(date,ev);
 			}

@@ -38,6 +38,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Arrays;
 
 public class AnalysisTopology {
+	private static final Logger log = LoggerFactory.getLogger(AnalysisTopology.class);
+
 	private static StormTopology buildTopology() {
 		TridentTopology topology = new TridentTopology();
 		TridentKafkaConfig spoutConf = new TridentKafkaConfig(
@@ -49,23 +51,28 @@ public class AnalysisTopology {
 		spoutConf.startOffsetTime = -1; // Start from newest messages.
 
 		Stream logStream = topology.newStream(AnalysisTopologyConstranst.SPOUT_INPUT,new OpaqueTridentKafkaSpout(spoutConf)).partitionBy(new Fields(FieldsConstrants.APP_FIELD)).parallelismHint(AnalysisTopologyConstranst.SPORT_INPUT_EXECUTORS); 
+		log.info("logStream fields: " + Arrays.toString(logStream.getOutputFields().toList().toArray()));
 
-		Stream fatalStream = logStream.each(logStream.getOutputFields(),new LevelFilter("FATAL")).partitionBy(new Fields(FieldsConstrants.APP_FIELD)).name(AnalysisTopologyConstranst.STREAM_FATAL);
-		Stream errorStream = logStream.each(logStream.getOutputFields(),new LevelFilter("ERROR")).partitionBy(new Fields(FieldsConstrants.APP_FIELD)).name(AnalysisTopologyConstranst.STREAM_ERROR);
-		Stream warnStream = logStream.each(logStream.getOutputFields(),new LevelFilter("WARNING")).partitionBy(new Fields(FieldsConstrants.APP_FIELD)).name(AnalysisTopologyConstranst.STREAM_WARN);
-		Stream infoStream = logStream.each(logStream.getOutputFields(),new LevelFilter("INFO")).partitionBy(new Fields(FieldsConstrants.APP_FIELD)).parallelismHint(AnalysisTopologyConstranst.BOLT_EVENT_EXECUTORS);
+		Stream fatalStream = logStream.each(new Fields(FieldsConstrants.LEVEL_FIELD),new LevelFilter("FATAL")).name(AnalysisTopologyConstranst.STREAM_FATAL);
+		Stream errorStream = logStream.each(new Fields(FieldsConstrants.LEVEL_FIELD),new LevelFilter("ERROR")).name(AnalysisTopologyConstranst.STREAM_ERROR);
+		Stream warnStream = logStream.each(new Fields(FieldsConstrants.LEVEL_FIELD),new LevelFilter("WARNING")).name(AnalysisTopologyConstranst.STREAM_WARN);
+		Stream infoStream = logStream.each(new Fields(FieldsConstrants.LEVEL_FIELD),new LevelFilter("INFO")).name(AnalysisTopologyConstranst.STREAM_INFO);
 
 		// event streams
-		Stream eventStream = infoStream.each(infoStream.getOutputFields(),new GetEvent(),new Fields(FieldsConstrants.EVENT_FIELD)).partitionBy(new Fields(FieldsConstrants.APP_FIELD)).parallelismHint(AnalysisTopologyConstranst.BOLT_EVENT_EXECUTORS);
+		Stream eventStream = infoStream.each(new Fields(FieldsConstrants.CONTENT_FIELD),new GetEvent(),new Fields(FieldsConstrants.EVENT_FIELD));
+		log.info("eventStream fields: " + Arrays.toString(eventStream.getOutputFields().toList().toArray()));
 
 		Stream onlineStream = eventStream.each(
-				eventStream.getOutputFields(),
+				new Fields(FieldsConstrants.EVENT_FIELD),
 				new EventFilter(new String[]{
 					AnalysisTopologyConstranst.EVENT_LOGIN,
 					AnalysisTopologyConstranst.EVENT_RELOGIN,
 					AnalysisTopologyConstranst.EVENT_BROKEN,
 					AnalysisTopologyConstranst.EVENT_LOGOUT}))
-			.each(new ParseOnlineEvents(),new Fields(
+			.each(
+				new Fields(FieldsConstrants.EVENT_FIELD,FieldsConstrants.CONTENT_FIELD),
+				new ParseOnlineEvents(),
+				new Fields(
 					FieldsConstrants.UID_FIELD,
 					FieldsConstrants.CTX_FIELD,
 					FieldsConstrants.IP_FIELD,
@@ -74,14 +81,16 @@ public class AnalysisTopology {
 					FieldsConstrants.VERSION_FIELD,
 					FieldsConstrants.IMSI_FIELD,
 					FieldsConstrants.EXPECT_PAYLOAD_FIELD))
-			.partitionBy(new Fields(FieldsConstrants.APP_FIELD))
-			.parallelismHint(2)
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_ONLINE);
+		log.info("onlineStream fields: " + Arrays.toString(onlineStream.getOutputFields().toList().toArray()));
 
 		Stream loginFailedStream = eventStream.each(
-				eventStream.getOutputFields(),
+				new Fields(FieldsConstrants.EVENT_FIELD),
 				new EventFilter(AnalysisTopologyConstranst.EVENT_LOGIN_FAILED))
-			.each(new ParseLoginFailedEvents(),new Fields(
+			.each(
+				new Fields(FieldsConstrants.EVENT_FIELD,FieldsConstrants.CONTENT_FIELD),
+				new ParseLoginFailedEvents(),
+				new Fields(
 					FieldsConstrants.REASON_FIELD,
 					FieldsConstrants.UID_FIELD,
 					FieldsConstrants.CTX_FIELD,
@@ -91,51 +100,56 @@ public class AnalysisTopology {
 					FieldsConstrants.VERSION_FIELD,
 					FieldsConstrants.IMSI_FIELD,
 					FieldsConstrants.EXPECT_PAYLOAD_FIELD))
-			.partitionBy(new Fields(FieldsConstrants.APP_FIELD))
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_LOGIN_FAILED);
 			
 		Stream speakStream = eventStream.each(
-				eventStream.getOutputFields(),
+				new Fields(FieldsConstrants.EVENT_FIELD),
 				new EventFilter(new String[]{
 					AnalysisTopologyConstranst.EVENT_GET_MIC,
 					AnalysisTopologyConstranst.EVENT_DENT_MIC,
 					AnalysisTopologyConstranst.EVENT_RELEASE_MIC,
 					AnalysisTopologyConstranst.EVENT_LOSTMIC_AUTO,
 					AnalysisTopologyConstranst.EVENT_LOSTMIC_REPLACE}))
-			.each(new ParseSpeakEvents(),new Fields(
+			.each(
+				new Fields(FieldsConstrants.EVENT_FIELD,FieldsConstrants.CONTENT_FIELD),
+				new ParseSpeakEvents(),
+				new Fields(
 					FieldsConstrants.UID_FIELD,
 					FieldsConstrants.GID_FIELD,
 					FieldsConstrants.TARGET_FIELD))
-			.partitionBy(new Fields(FieldsConstrants.APP_FIELD))
 			.parallelismHint(2)
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_SPEAK);
 
 		Stream groupStream = eventStream.each(
-				eventStream.getOutputFields(),
+				new Fields(FieldsConstrants.EVENT_FIELD),
 				new EventFilter(new String[]{
 					AnalysisTopologyConstranst.EVENT_JOIN_GROUP,
 					AnalysisTopologyConstranst.EVENT_LEAVE_GROUP}))
-			.each(new ParseGroupEvents(),new Fields(
+			.each(
+				new Fields(FieldsConstrants.EVENT_FIELD,FieldsConstrants.CONTENT_FIELD),
+				new ParseGroupEvents(),
+				new Fields(
 					FieldsConstrants.UID_FIELD,
 					FieldsConstrants.GID_FIELD))
-			.partitionBy(new Fields(FieldsConstrants.APP_FIELD))
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_GROUP);
 
 		Stream callStream = eventStream.each(
-				eventStream.getOutputFields(),
+				new Fields(FieldsConstrants.EVENT_FIELD),
 				new EventFilter(new String[]{
 					AnalysisTopologyConstranst.EVENT_CALL,
 					AnalysisTopologyConstranst.EVENT_QUICKDIAL}))
-			.each(new ParseCallEvents(),new Fields(
+			.each(
+				new Fields(FieldsConstrants.EVENT_FIELD,FieldsConstrants.CONTENT_FIELD),
+				new ParseCallEvents(),
+				new Fields(
 					FieldsConstrants.UID_FIELD,
 					FieldsConstrants.TARGET_FIELD,
 					FieldsConstrants.TARGET_GOT_FIELD))
-			.partitionBy(new Fields(FieldsConstrants.APP_FIELD))
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_CALL);
 
 
 		Stream queryStream = eventStream.each(
-				eventStream.getOutputFields(),
+				new Fields(FieldsConstrants.EVENT_FIELD),
 				new EventFilter(new String[]{
 					AnalysisTopologyConstranst.EVENT_QUERY_USER,
 					AnalysisTopologyConstranst.EVENT_QUERY_GROUP,
@@ -143,15 +157,17 @@ public class AnalysisTopology {
 					AnalysisTopologyConstranst.EVENT_QUERY_MEMBERS,
 					AnalysisTopologyConstranst.EVENT_QUERY_DEPARTMENT,
 					AnalysisTopologyConstranst.EVENT_QUERY_ENTERPISE_GROUP}))
-			.each(new ParseQueryEvents(),new Fields(
+			.each(
+				new Fields(FieldsConstrants.EVENT_FIELD,FieldsConstrants.CONTENT_FIELD),
+				new ParseQueryEvents(),
+				new Fields(
 					FieldsConstrants.UID_FIELD,
 					FieldsConstrants.COUNT_FIELD,
 					FieldsConstrants.TARGET_FIELD))
-			.partitionBy(new Fields(FieldsConstrants.APP_FIELD))
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_QUERY);
 
 		Stream profileStream = eventStream.each(
-				eventStream.getOutputFields(),
+				new Fields(FieldsConstrants.EVENT_FIELD),
 				new EventFilter( new String[]{
 					AnalysisTopologyConstranst.EVENT_CHANGE_NAME,
 					AnalysisTopologyConstranst.EVENT_CHANGE_PWD,
@@ -159,16 +175,18 @@ public class AnalysisTopology {
 					AnalysisTopologyConstranst.EVENT_CONTACT_REQ,
 					AnalysisTopologyConstranst.EVENT_CONTACT_REP,
 					AnalysisTopologyConstranst.EVENT_CONTACT_RM}))
-			.each(new ParseProfileEvents(),new Fields(
+			.each(
+				new Fields(FieldsConstrants.EVENT_FIELD,FieldsConstrants.CONTENT_FIELD),
+				new ParseProfileEvents(),
+				new Fields(
 					FieldsConstrants.UID_FIELD,
 					FieldsConstrants.TARGET_FIELD,
 					FieldsConstrants.TARGET_GOT_FIELD,
 					FieldsConstrants.TARGET_DENT_FIELD))
-			.partitionBy(new Fields(FieldsConstrants.APP_FIELD))
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_PROFILE);
 
 		Stream manageStream = eventStream.each(
-				eventStream.getOutputFields(),
+				new Fields(FieldsConstrants.EVENT_FIELD),
 				new EventFilter( new String[]{
 					AnalysisTopologyConstranst.EVENT_DISPATCH,
 					AnalysisTopologyConstranst.EVENT_SW_GPS,
@@ -182,31 +200,41 @@ public class AnalysisTopology {
 					AnalysisTopologyConstranst.EVENT_DEPRIVE_FAILED,
 					AnalysisTopologyConstranst.EVENT_CHANGE_GROUP_NAME,
 					AnalysisTopologyConstranst.EVENT_CHANGE_GROUP_NAME_FAILED}))
-			.each(new ParseManageEvents(),new Fields(
+			.each(
+				new Fields(FieldsConstrants.EVENT_FIELD,FieldsConstrants.CONTENT_FIELD),
+				new ParseManageEvents(),
+				new Fields(
 					FieldsConstrants.UID_FIELD,
 					FieldsConstrants.TARGET_FIELD,
 					FieldsConstrants.TARGET_GOT_FIELD,
 					FieldsConstrants.TARGET_DENT_FIELD,
 					FieldsConstrants.SW_FIELD,
 					FieldsConstrants.VALUE_FIELD))
-			.partitionBy(new Fields(FieldsConstrants.APP_FIELD))
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_MANAGE);
 
 
 		Stream worksheetStream = eventStream.each(
-				eventStream.getOutputFields(),
+				new Fields(FieldsConstrants.EVENT_FIELD),
 				new EventFilter(AnalysisTopologyConstranst.EVENT_WORKSHEET_POST))
-			.each(new ParseWorkSheetEvents(),new Fields(
+			.each(
+				new Fields(FieldsConstrants.EVENT_FIELD,FieldsConstrants.CONTENT_FIELD),
+				new ParseWorkSheetEvents(),
+				new Fields(
 					FieldsConstrants.UID_FIELD,
 					FieldsConstrants.TARGET_FIELD,
 					FieldsConstrants.COUNT_FIELD))
-			.partitionBy(new Fields(FieldsConstrants.APP_FIELD))
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_WORKSHEET);
 
 		// log level count
-		Stream logCountStream = logStream.partitionAggregate(new TimeBucketAggregator(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.LEVEL_FIELD),new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD,FieldsConstrants.LOG_COUNT_FIELD));
+		Stream logCountStream = logStream.partitionAggregate(
+				new Fields(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.LEVEL_FIELD),
+				new TimeBucketAggregator(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.LEVEL_FIELD),
+				new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD,FieldsConstrants.LOG_COUNT_FIELD));
 
-		Stream evCountStream = eventStream.partitionAggregate(new TimeBucketAggregator(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.EVENT_FIELD),new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD,FieldsConstrants.EVENT_COUNT_FIELD));
+		Stream evCountStream = eventStream.partitionAggregate(
+				new Fields(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.EVENT_FIELD),
+				new TimeBucketAggregator(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.EVENT_FIELD),
+				new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD,FieldsConstrants.EVENT_COUNT_FIELD));
 
 		Stream loadStream = topology.join(
 			logCountStream,new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD),
@@ -217,13 +245,18 @@ public class AnalysisTopology {
 	}
 
 	public static void main(String[] args) throws AlreadyAliveException, InvalidTopologyException, AuthorizationException,InterruptedException {
+		if( args == null || args.length < 1 ) {
+			System.out.println("need cluster or local args");
+			return;
+		}
+
 		Config conf = new Config();
-		conf.setNumWorkers(AnalysisTopologyConstranst.TOPOLOGY_WORKERS);
 		String name = AnalysisTopology.class.getSimpleName();
 
-		if (args != null && args.length > 0) {
+		if( args[0].equalsIgnoreCase("cluster") ) {
+			conf.setNumWorkers(AnalysisTopologyConstranst.TOPOLOGY_WORKERS);
 			StormSubmitter.submitTopologyWithProgressBar(name, conf, buildTopology());
-		} else {
+		} else if( args[0].equalsIgnoreCase("local") ) {
 			conf.setDebug(true);
 			System.out.println("Submit Topology");
 
