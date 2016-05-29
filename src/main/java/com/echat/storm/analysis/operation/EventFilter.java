@@ -13,7 +13,6 @@ import com.echat.storm.analysis.FieldsConstrants;
 public class EventFilter extends BaseFilter {
 	private static final Logger log = LoggerFactory.getLogger(EventFilter.class);
 	private final String[] events;
-//	private boolean first = false;
 
 	public EventFilter(String event) {
 		this.events = new String[]{ event };
@@ -31,10 +30,6 @@ public class EventFilter extends BaseFilter {
 		}
 		final String curEv = tuple.getStringByField(FieldsConstrants.EVENT_FIELD);
 
-//		if( first ) {
-//			first = false;
-//			log.info("Event: " + curEv + " accepted: " + Arrays.toString(events));
-//		}
 		for(String ev : events) {
 			if( ev.equals(curEv) ) {
 				return true;

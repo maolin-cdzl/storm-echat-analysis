@@ -104,5 +104,7 @@ public class AnalysisTopologyConstranst {
 	public static final String BOLT_STATISTICS_PERSIST = "bolt-stat-persist";
 	public static final String KEY_APP_LOAD_PREFIX = "appload-";
 	public static final long MAX_APP_LOAD_LENGTH = 3600;
+
+	public static final int LOAD_SPLIDING_WINDOW_IN_SECONDS = 5;
 }
 

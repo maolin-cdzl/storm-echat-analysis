@@ -1,6 +1,5 @@
 package com.echat.storm.analysis;
 
-import com.echat.storm.analysis.operation.*;
 
 import storm.kafka.ZkHosts;
 import storm.kafka.trident.TridentKafkaConfig;
@@ -8,6 +7,7 @@ import storm.kafka.trident.OpaqueTridentKafkaSpout;
 
 
 import storm.trident.TridentTopology;
+import storm.trident.TridentState;
 import storm.trident.Stream;
 import storm.trident.fluent.GroupedStream;
 
@@ -37,6 +37,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
+import com.echat.storm.analysis.types.*;
+import com.echat.storm.analysis.operation.*;
+import com.echat.storm.analysis.state.*;
+
 public class AnalysisTopology {
 	private static final Logger log = LoggerFactory.getLogger(AnalysisTopology.class);
 
@@ -48,10 +52,10 @@ public class AnalysisTopology {
 				AnalysisTopologyConstranst.ZOOKEEPER_PTTSVC_LOG_SPOUT_ID
 				);
 		spoutConf.scheme = new SchemeAsMultiScheme(new PttsvcLogInfoScheme());
-		spoutConf.startOffsetTime = -1; // Start from newest messages.
+		spoutConf.startOffsetTime = kafka.api.OffsetRequest.LatestTime(); 
+		spoutConf.ignoreZkOffsets = true;
 
 		Stream logStream = topology.newStream(AnalysisTopologyConstranst.SPOUT_INPUT,new OpaqueTridentKafkaSpout(spoutConf)).partitionBy(new Fields(FieldsConstrants.APP_FIELD)).parallelismHint(AnalysisTopologyConstranst.SPORT_INPUT_EXECUTORS); 
-		log.info("logStream fields: " + Arrays.toString(logStream.getOutputFields().toList().toArray()));
 
 		Stream fatalStream = logStream.each(new Fields(FieldsConstrants.LEVEL_FIELD),new LevelFilter("FATAL")).name(AnalysisTopologyConstranst.STREAM_FATAL);
 		Stream errorStream = logStream.each(new Fields(FieldsConstrants.LEVEL_FIELD),new LevelFilter("ERROR")).name(AnalysisTopologyConstranst.STREAM_ERROR);
@@ -60,7 +64,6 @@ public class AnalysisTopology {
 
 		// event streams
 		Stream eventStream = infoStream.each(new Fields(FieldsConstrants.CONTENT_FIELD),new GetEvent(),new Fields(FieldsConstrants.EVENT_FIELD));
-		log.info("eventStream fields: " + Arrays.toString(eventStream.getOutputFields().toList().toArray()));
 
 		Stream onlineStream = eventStream.each(
 				new Fields(FieldsConstrants.EVENT_FIELD),
@@ -82,7 +85,6 @@ public class AnalysisTopology {
 					FieldsConstrants.IMSI_FIELD,
 					FieldsConstrants.EXPECT_PAYLOAD_FIELD))
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_ONLINE);
-		log.info("onlineStream fields: " + Arrays.toString(onlineStream.getOutputFields().toList().toArray()));
 
 		Stream loginFailedStream = eventStream.each(
 				new Fields(FieldsConstrants.EVENT_FIELD),
@@ -226,20 +228,25 @@ public class AnalysisTopology {
 			.name(AnalysisTopologyConstranst.STREAM_EVENT_GROUP_WORKSHEET);
 
 		// log level count
-		Stream logCountStream = logStream.partitionAggregate(
+		Stream loadStream = topology.merge(
+			logStream.partitionAggregate(
 				new Fields(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.LEVEL_FIELD),
-				new TimeBucketAggregator(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.LEVEL_FIELD),
-				new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD,FieldsConstrants.LOG_COUNT_FIELD));
-
-		Stream evCountStream = eventStream.partitionAggregate(
+				new FieldBucketAggregator(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.LEVEL_FIELD),
+				new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD,FieldsConstrants.LOAD_FIELD)),
+			eventStream.partitionAggregate(
 				new Fields(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.EVENT_FIELD),
-				new TimeBucketAggregator(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.EVENT_FIELD),
-				new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD,FieldsConstrants.EVENT_COUNT_FIELD));
+				new FieldBucketAggregator(FieldsConstrants.APP_FIELD,FieldsConstrants.DATETIME_FIELD,FieldsConstrants.EVENT_FIELD),
+				new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD,FieldsConstrants.LOAD_FIELD))
+		);
 
-		Stream loadStream = topology.join(
-			logCountStream,new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD),
-			evCountStream,new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD),
-			new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD,FieldsConstrants.LOG_COUNT_FIELD,FieldsConstrants.EVENT_COUNT_FIELD));
+		//log.info("loadStream fields: " + Arrays.toString(loadStream.getOutputFields().toList().toArray()));
+
+		TridentState state = loadStream.groupBy(new Fields(FieldsConstrants.ENTITY_FIELD,FieldsConstrants.BUCKET_FIELD)).persistentAggregate(
+				EntityLoadState.nonTransactional(new RedisConfig.Builder().setHost("192.168.1.181").setPort(6379).build()),
+				new Fields(FieldsConstrants.LOAD_FIELD),
+				new EntityLoadAggregator(),
+				new Fields(FieldsConstrants.ENTITY_LOAD_FIELD)
+				);
 
 		return topology.build();
 	}

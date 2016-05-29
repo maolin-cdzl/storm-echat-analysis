@@ -34,9 +34,6 @@ public class ParseProfileEvents extends BaseFunction {
 
 		final String ev = tuple.getStringByField(FieldsConstrants.EVENT_FIELD);
 		final String content = tuple.getStringByField(FieldsConstrants.CONTENT_FIELD);
-		if( AnalysisTopologyConstranst.DEBUG ) {
-			log.info("Parse event:" + ev + " content:" + content);
-		}
 		if( ev != null && content != null ) {
 			Values values = null;
 			if( AnalysisTopologyConstranst.EVENT_CHANGE_NAME.equals(ev) ) {

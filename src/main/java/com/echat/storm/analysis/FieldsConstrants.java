@@ -33,6 +33,6 @@ public class FieldsConstrants {
 	public static final String TARGET_GOT_FIELD = "target-got";
 	public static final String TARGET_DENT_FIELD = "target-dent";
 
-	public static final String LOG_COUNT_FIELD = "log-count";
-	public static final String EVENT_COUNT_FIELD = "ev-count";
+	public static final String LOAD_FIELD = "load";
+	public static final String ENTITY_LOAD_FIELD = "entity-load";
 }
