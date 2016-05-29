@@ -1,6 +1,5 @@
 package com.echat.storm.analysis;
 
-
 import storm.kafka.ZkHosts;
 import storm.kafka.trident.TridentKafkaConfig;
 import storm.kafka.trident.OpaqueTridentKafkaSpout;
