@@ -1,6 +1,6 @@
 package com.echat.storm.analysis;
 
-public class FieldsConstrants {
+public class FieldConstant {
 	public static final String ENTITY_FIELD = "entity";
 	public static final String TIME_START_FIELD = "tvstart";
 	public static final String TIME_END_FIELD = "tvend";
@@ -35,4 +35,6 @@ public class FieldsConstrants {
 
 	public static final String LOAD_FIELD = "load";
 	public static final String ENTITY_LOAD_FIELD = "entity-load";
+
+	public static final String BROKEN_EVENT_FIELD = "broken-event";
 }

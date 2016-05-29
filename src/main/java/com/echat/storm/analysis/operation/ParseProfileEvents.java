@@ -6,8 +6,7 @@ import storm.trident.operation.BaseFunction;
 import storm.trident.operation.TridentCollector;
 import storm.trident.operation.TridentOperationContext;
 
-import com.echat.storm.analysis.FieldsConstrants;
-import com.echat.storm.analysis.AnalysisTopologyConstranst;
+import com.echat.storm.analysis.constant.*;
 import com.echat.storm.analysis.utils.*;
 
 import java.util.Map;
@@ -27,26 +26,26 @@ public class ParseProfileEvents extends BaseFunction {
 
 	@Override
 	public void execute(TridentTuple tuple, TridentCollector collector) {
-		if( ! tuple.contains(FieldsConstrants.EVENT_FIELD) || !tuple.contains(FieldsConstrants.CONTENT_FIELD) ) {
+		if( ! tuple.contains(FieldConstant.EVENT_FIELD) || !tuple.contains(FieldConstant.CONTENT_FIELD) ) {
 			log.warn("Can not found all need fields in: " + Arrays.toString(tuple.getFields().toList().toArray()));
 			return;
 		}
 
-		final String ev = tuple.getStringByField(FieldsConstrants.EVENT_FIELD);
-		final String content = tuple.getStringByField(FieldsConstrants.CONTENT_FIELD);
+		final String ev = tuple.getStringByField(FieldConstant.EVENT_FIELD);
+		final String content = tuple.getStringByField(FieldConstant.CONTENT_FIELD);
 		if( ev != null && content != null ) {
 			Values values = null;
-			if( AnalysisTopologyConstranst.EVENT_CHANGE_NAME.equals(ev) ) {
+			if( TopologyConstant.EVENT_CHANGE_NAME.equals(ev) ) {
 				values = processChangeName(content);
-			} else if( AnalysisTopologyConstranst.EVENT_CHANGE_PWD.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_CHANGE_PWD.equals(ev) ) {
 				values = processChangePwd(content);
-			} else if( AnalysisTopologyConstranst.EVENT_CHANGE_PWD_FAILED.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_CHANGE_PWD_FAILED.equals(ev) ) {
 				values = processChangePwdFailed(content);
-			} else if( AnalysisTopologyConstranst.EVENT_CONTACT_REQ.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_CONTACT_REQ.equals(ev) ) {
 				values = processContactReq(content);
-			} else if( AnalysisTopologyConstranst.EVENT_CONTACT_REP.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_CONTACT_REP.equals(ev) ) {
 				values = processContactRep(content);
-			} else if( AnalysisTopologyConstranst.EVENT_CONTACT_RM.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_CONTACT_RM.equals(ev) ) {
 				values = processContactRM(content);
 			}
 

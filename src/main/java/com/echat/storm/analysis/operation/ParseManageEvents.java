@@ -6,8 +6,7 @@ import storm.trident.operation.BaseFunction;
 import storm.trident.operation.TridentCollector;
 import storm.trident.operation.TridentOperationContext;
 
-import com.echat.storm.analysis.FieldsConstrants;
-import com.echat.storm.analysis.AnalysisTopologyConstranst;
+import com.echat.storm.analysis.constant.*;
 import com.echat.storm.analysis.utils.*;
 
 import java.util.Map;
@@ -26,38 +25,38 @@ public class ParseManageEvents extends BaseFunction {
 
 	@Override
 	public void execute(TridentTuple tuple, TridentCollector collector) {
-		if( ! tuple.contains(FieldsConstrants.EVENT_FIELD) || !tuple.contains(FieldsConstrants.CONTENT_FIELD) ) {
+		if( ! tuple.contains(FieldConstant.EVENT_FIELD) || !tuple.contains(FieldConstant.CONTENT_FIELD) ) {
 			log.warn("Can not found all need fields in: " + Arrays.toString(tuple.getFields().toList().toArray()));
 			return;
 		}
 
-		final String ev = tuple.getStringByField(FieldsConstrants.EVENT_FIELD);
-		final String content = tuple.getStringByField(FieldsConstrants.CONTENT_FIELD);
+		final String ev = tuple.getStringByField(FieldConstant.EVENT_FIELD);
+		final String content = tuple.getStringByField(FieldConstant.CONTENT_FIELD);
 		if( ev != null && content != null ) {
 			Values values = null;
-			if( AnalysisTopologyConstranst.EVENT_DISPATCH.equals(ev) ) {
+			if( TopologyConstant.EVENT_DISPATCH.equals(ev) ) {
 				values = processDispatch(content);
-			} else if( AnalysisTopologyConstranst.EVENT_SW_GPS.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_SW_GPS.equals(ev) ) {
 				values = processSwAudio(content);
-			} else if( AnalysisTopologyConstranst.EVENT_SW_GPS.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_SW_GPS.equals(ev) ) {
 				values = processSwGps(content);
-			} else if( AnalysisTopologyConstranst.EVENT_TAKE_MIC.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_TAKE_MIC.equals(ev) ) {
 				values = processTakeMic(content);
-			} else if( AnalysisTopologyConstranst.EVENT_CREATE_GROUP.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_CREATE_GROUP.equals(ev) ) {
 				values = processCreateGroup(content);
-			} else if( AnalysisTopologyConstranst.EVENT_RM_GROUP.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_RM_GROUP.equals(ev) ) {
 				values = processRmGroup(content);
-			} else if( AnalysisTopologyConstranst.EVENT_EMPOWER.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_EMPOWER.equals(ev) ) {
 				values = processEmpower(content);
-			} else if( AnalysisTopologyConstranst.EVENT_EMPOWER_FAILED.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_EMPOWER_FAILED.equals(ev) ) {
 				values = processEmpowerFailed(content);
-			} else if( AnalysisTopologyConstranst.EVENT_DEPRIVE.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_DEPRIVE.equals(ev) ) {
 				values = processDeprive(content);
-			} else if( AnalysisTopologyConstranst.EVENT_DEPRIVE_FAILED.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_DEPRIVE_FAILED.equals(ev) ) {
 				values = processDepriveFailed(content);
-			} else if( AnalysisTopologyConstranst.EVENT_CHANGE_GROUP_NAME.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_CHANGE_GROUP_NAME.equals(ev) ) {
 				values = processChangeGroupName(content);
-			} else if( AnalysisTopologyConstranst.EVENT_CHANGE_GROUP_NAME_FAILED.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_CHANGE_GROUP_NAME_FAILED.equals(ev) ) {
 				values = processChangeGroupNameFailed(content);
 			}
 

@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
-import com.echat.storm.analysis.FieldsConstrants;
+import com.echat.storm.analysis.constant.FieldConstant;
 
 public class EventFilter extends BaseFilter {
 	private static final Logger log = LoggerFactory.getLogger(EventFilter.class);
@@ -28,7 +28,7 @@ public class EventFilter extends BaseFilter {
 			log.error("Event list is null or empty");
 			return false;
 		}
-		final String curEv = tuple.getStringByField(FieldsConstrants.EVENT_FIELD);
+		final String curEv = tuple.getStringByField(FieldConstant.EVENT_FIELD);
 
 		for(String ev : events) {
 			if( ev.equals(curEv) ) {

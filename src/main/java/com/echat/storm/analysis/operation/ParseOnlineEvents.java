@@ -6,8 +6,7 @@ import storm.trident.operation.BaseFunction;
 import storm.trident.operation.TridentCollector;
 import storm.trident.operation.TridentOperationContext;
 
-import com.echat.storm.analysis.FieldsConstrants;
-import com.echat.storm.analysis.AnalysisTopologyConstranst;
+import com.echat.storm.analysis.constant.*;
 import com.echat.storm.analysis.utils.*;
 
 import java.util.Map;
@@ -27,21 +26,21 @@ public class ParseOnlineEvents extends BaseFunction {
 
 	@Override
 	public void execute(TridentTuple tuple, TridentCollector collector) {
-		if( ! tuple.contains(FieldsConstrants.EVENT_FIELD) || !tuple.contains(FieldsConstrants.CONTENT_FIELD) ) {
+		if( ! tuple.contains(FieldConstant.EVENT_FIELD) || !tuple.contains(FieldConstant.CONTENT_FIELD) ) {
 			log.warn("Can not found all need fields in: " + Arrays.toString(tuple.getFields().toList().toArray()));
 			return;
 		}
-		final String ev = tuple.getStringByField(FieldsConstrants.EVENT_FIELD);
-		final String content = tuple.getStringByField(FieldsConstrants.CONTENT_FIELD);
+		final String ev = tuple.getStringByField(FieldConstant.EVENT_FIELD);
+		final String content = tuple.getStringByField(FieldConstant.CONTENT_FIELD);
 		if( ev != null && content != null ) {
 			Values values = null;
-			if( AnalysisTopologyConstranst.EVENT_LOGIN.equals(ev) ) {
+			if( TopologyConstant.EVENT_LOGIN.equals(ev) ) {
 				values = processLogin(content);
-			} else if( AnalysisTopologyConstranst.EVENT_RELOGIN.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_RELOGIN.equals(ev) ) {
 				values = processRelogin(content);
-			} else if( AnalysisTopologyConstranst.EVENT_BROKEN.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_BROKEN.equals(ev) ) {
 				values = processBroken(content);
-			} else if( AnalysisTopologyConstranst.EVENT_LOGOUT.equals(ev) ) {
+			} else if( TopologyConstant.EVENT_LOGOUT.equals(ev) ) {
 				values = processLogout(content);
 			}
 

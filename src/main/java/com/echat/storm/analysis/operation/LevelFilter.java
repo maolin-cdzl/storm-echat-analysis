@@ -3,7 +3,7 @@ package com.echat.storm.analysis.operation;
 import storm.trident.tuple.TridentTuple;
 import storm.trident.operation.BaseFilter;
 
-import com.echat.storm.analysis.FieldsConstrants;
+import com.echat.storm.analysis.constant.FieldConstant;
 
 public class LevelFilter extends BaseFilter {
 	private final String level;
@@ -14,7 +14,7 @@ public class LevelFilter extends BaseFilter {
 
 	@Override
 	public boolean isKeep(TridentTuple tuple) {
-		return level.equals(tuple.getStringByField(FieldsConstrants.LEVEL_FIELD));
+		return level.equals(tuple.getStringByField(FieldConstant.LEVEL_FIELD));
 	}
 }
 

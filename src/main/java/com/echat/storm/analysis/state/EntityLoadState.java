@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.ArrayList;
 import java.io.Serializable;
 import java.text.ParseException;
@@ -154,6 +155,7 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 
 	@Override
 	public void multiPut(List<List<Object>> keys,List<EntityLoadBucket> vals) {
+		LinkedList<EntityLoadBucket> toPubs = new LinkedList<EntityLoadBucket>();
 		for(EntityLoadBucket b : vals) {
 			if( b == null || b.entity == null ) {
 				continue;
@@ -173,27 +175,34 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 			list.merge(b);
 
 			while( list.getWindow() >= _window ) {
-				pubToRedis(list.popEarliest());
+				toPubs.add(list.popEarliest());
 			}
+		}
+
+		if( toPubs.size() > 0 ) {
+			pubToRedis(toPubs);
 		}
 	}
 
-	public void pubToRedis(EntityLoadBucket bucket) {
-		String[] reports = bucket.toReport(_gson,DATETIME_FORMAT);
-		if( reports == null ) {
-			return;
-		}
-		final String entity = reports[0];
-		final String json = reports[2];
-
-		if( json == null || json.isEmpty() ) {
-			return;
-		}
-
+	public void pubToRedis(List<EntityLoadBucket> buckets) {
 		Jedis jedis = null;
 		try {
 			jedis = _pool.getResource();
-			jedis.publish(_keyPrefix + entity,json);
+			Pipeline pipe = jedis.pipelined();
+
+			for(EntityLoadBucket bucket : buckets) {
+				String[] reports = bucket.toReport(_gson,DATETIME_FORMAT);
+				if( reports != null ) {
+					final String entity = reports[0];
+					final String json = reports[2];
+
+					if( json == null || json.isEmpty() ) {
+						return;
+					}
+					pipe.publish(_keyPrefix + entity,json);
+				}
+			}
+			pipe.sync();
 		} finally {
 			if( jedis != null ) {
 				jedis.close();

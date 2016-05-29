@@ -3,7 +3,7 @@
   <groupId>com.echat.storm.analysis</groupId>
   <artifactId>storm-echat-analysis</artifactId>
   <version>0.1.0</version>
-
+  <packaging>jar</packaging>
   <properties>
   	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -61,6 +61,7 @@
 	  <plugins>
 		  <plugin>
 			  <artifactId>maven-assembly-plugin</artifactId>
+			  <version>2.6</version>
 			  <configuration>
 				  <descriptorRefs>
 					  <descriptorRef>jar-with-dependencies</descriptorRef>
@@ -85,11 +86,19 @@
 		  <plugin>
 			  <groupId>org.apache.maven.plugins</groupId>
 			  <artifactId>maven-compiler-plugin</artifactId>
-			  <version>2.5</version>
+			  <version>3.5.1</version>
 			  <configuration>
-				  <source>1.6</source>
-				  <target>1.6</target>
+				  <source>1.7</source>
+				  <target>1.7</target>
 				  <encoding>UTF-8</encoding>
+			  </configuration>
+		  </plugin>
+
+		  <plugin>
+			  <groupId>org.apache.maven.plugins</groupId>
+			  <artifactId>maven-jar-plugin</artifactId>
+			  <version>3.0.0</version>
+			  <configuration>
 			  </configuration>
 		  </plugin>
 	  </plugins>

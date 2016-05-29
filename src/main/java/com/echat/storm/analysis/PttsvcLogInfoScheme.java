@@ -20,6 +20,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.io.UnsupportedEncodingException;
 
+import com.echat.storm.analysis.constant.FieldConstant;
+
+
 public class PttsvcLogInfoScheme implements Scheme {
 
 	private static final String PATTERN = "^(\\w+)\\s+(\\d{4}[/:\\.\\-\\\\]\\d{2}[/:\\.\\-\\\\]\\d{2}\\s\\d{2}:\\d{2}:\\d{2})\\.(\\d+)\\s(\\w+)[^\"]*\"([^\"]+)\"";
@@ -49,7 +52,12 @@ public class PttsvcLogInfoScheme implements Scheme {
 			MatchResult mr = pm.getMatch();
 			String app = mr.group(1);
 			String datetime = mr.group(2);
-			String timestamp = mr.group(3);
+			Long timestamp;
+			try {
+				ts = Long.parseLong(mr.group(3)) / 100L;
+			} catch( NumberFormatException e ) {
+				timestamp = null;
+			}
 			String level = mr.group(4);
 			String content = mr.group(5);
 
@@ -62,11 +70,11 @@ public class PttsvcLogInfoScheme implements Scheme {
 
 	public Fields getOutputFields() {
 		return new Fields(
-				FieldsConstrants.APP_FIELD,
-				FieldsConstrants.DATETIME_FIELD,
-				FieldsConstrants.TIMESTAMP_FIELD,
-				FieldsConstrants.LEVEL_FIELD,
-				FieldsConstrants.CONTENT_FIELD
+				FieldConstant.APP_FIELD,
+				FieldConstant.DATETIME_FIELD,
+				FieldConstant.TIMESTAMP_FIELD,
+				FieldConstant.LEVEL_FIELD,
+				FieldConstant.CONTENT_FIELD
 				);
 	}
 }

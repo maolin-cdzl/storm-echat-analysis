@@ -1,6 +1,6 @@
 package com.echat.storm.analysis;
 
-public class AnalysisTopologyConstranst {
+public class TopologyConstant {
 	// debug
 	public static final boolean DEBUG = true;
 
