@@ -85,54 +85,63 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 		if( state.updateTimeline(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
 			String content = state.getGson().toJson(ev);
 			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGIN_SUFFIX,content);
-		}
+			if( !state.isTooOld(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
+				setUserOnline(state,pipe,collector,ev);
 
-		if( ! state.isTooOld(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
-			setUserOnline(state,pipe,collector,ev);
-		}
-
-		String lastLogoutJson = null;
-		Jedis jedis = null;
-		try {
-			jedis = state.getJedis();
-			lastLogoutJson = jedis.get(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGOUT_SUFFIX);
-		} finally {
-			if( jedis != null ) {
-				state.returnJedis(jedis);
-			}
-		}
-
-		if( lastLogoutJson != null ) {
-			OnlineEvent lastLogout = state.getGson().fromJson(lastLogoutJson,OnlineEvent.class);
-			if( lastLogout != null ) {
-				if( ev.date.after(lastLogout.date) && TimeUnit.MILLISECONDS.toSeconds(ev.date.getTime() - lastLogout.date.getTime()) < 60) {
-					stormAndEmitConnectionBroken(state,pipe,collector,lastLogout);
+				String lastLogoutJson = null;
+				Jedis jedis = null;
+				try {
+					jedis = state.getJedis();
+					lastLogoutJson = jedis.get(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGOUT_SUFFIX);
+				} finally {
+					if( jedis != null ) {
+						state.returnJedis(jedis);
+					}
 				}
+
+				if( lastLogoutJson != null ) {
+					OnlineEvent lastLogout = state.getGson().fromJson(lastLogoutJson,OnlineEvent.class);
+					if( lastLogout != null ) {
+						if( TopologyConstant.EVENT_BROKEN.equals(ev.event) ) {
+							if( ev.date.after(lastLogout.date) ) {
+							   	long offtime = TimeUnit.MILLISECONDS.toSeconds(ev.date.getTime() - lastLogout.date.getTime());
+								if( offtime < 300 ) {
+									BrokenEvent broken = BrokenEvent.create(ev,offtime);
+									stormAndEmitConnectionBroken(state,pipe,collector,broken);
+								}
+							}
+						}
+					}
+				}
+			} else {
+				log.warn("Stale Login events,ts: " + ev.ts + ", logout ts: " + state.getTimeline(TIMELINE_OFFLINE,ev.uid));
 			}
+		} else {
+			log.warn("Stale Login events,ts: " + ev.ts + ", login ts: " + state.getTimeline(TIMELINE_ONLINE,ev.uid));
 		}
 	}
 
 	private void processRelogin(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
-		if( state.updateTimeline(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
+		if( state.timelineBefore(ev.uid,TIMELINE_ONLINE,TIMELINE_OFFLINE) &&
+			state.updateTimeline(TIMELINE_ONLINE,ev.uid,ev.ts)  &&
+			!state.isTooOld(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
 			String content = state.getGson().toJson(ev);
 			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGIN_SUFFIX,content);
-		}
-
-		if( ! state.isTooOld(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
 			setUserOnline(state,pipe,collector,ev);
 		}
 
-		stormAndEmitConnectionBroken(state,pipe,collector,ev);
+		BrokenEvent broken = BrokenEvent.create(ev,0);
+		stormAndEmitConnectionBroken(state,pipe,collector,broken);
 	}
 
 	private void processBroken(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		if( state.updateTimeline(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
 			String content = state.getGson().toJson(ev);
 			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGOUT_SUFFIX,content);
-		}
 
-		if( ! state.isTooOld(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
-			setUserOffline(state,pipe,collector,ev);
+			if( ! state.isTooOld(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
+				setUserOffline(state,pipe,collector,ev);
+			}
 		}
 	}
 
@@ -140,26 +149,26 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 		if( state.updateTimeline(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
 			String content = state.getGson().toJson(ev);
 			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGOUT_SUFFIX,content);
-		}
-
-		if( ! state.isTooOld(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
-			setUserOffline(state,pipe,collector,ev);
+			if( ! state.isTooOld(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
+				setUserOffline(state,pipe,collector,ev);
+			}
 		}
 	}
 
-	private void stormAndEmitConnectionBroken(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
+	private void stormAndEmitConnectionBroken(BaseState state,Pipeline pipe,TridentCollector collector,BrokenEvent ev) {
 		String content = state.getGson().toJson(ev);
-		pipe.lpush(RedisConstant.BROKEN_LIST_KEY,content);
-		pipe.ltrim(RedisConstant.BROKEN_LIST_KEY,0,RedisConstant.BROKEN_LIST_MAX_SIZE);
+		pipe.lpush(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.BROKEN_LIST_SUFFIX,content);
+		pipe.ltrim(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.BROKEN_LIST_SUFFIX,0,RedisConstant.BROKEN_LIST_MAX_SIZE);
 		collector.emit(new Values(content));
 	}
 
 	private void setUserOnline(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.STATE_SUFFIX,RedisConstant.STATE_ONLINE);
+		pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.ENTITY_SUFFIX,ev.entity);
 		pipe.sadd(RedisConstant.ONLINE_USER_KEY,ev.uid);
 
-		pipe.sadd(RedisConstant.ENTITY_PREFIX + ev.app + RedisConstant.USER_SUFFIX,ev.uid);
-		pipe.sadd(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.ENTITY_SET_SUFFIX,ev.app);
+		pipe.sadd(RedisConstant.ENTITY_PREFIX + ev.entity + RedisConstant.USER_SUFFIX,ev.uid);
+		pipe.sadd(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.ENTITY_SET_SUFFIX,ev.entity);
 
 		if( ev.device != null ) {
 			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.DEVICE_SUFFIX,ev.device);
@@ -172,13 +181,15 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 	private void setUserOffline(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.STATE_SUFFIX,RedisConstant.STATE_OFFLINE);
 		pipe.srem(RedisConstant.ONLINE_USER_KEY,ev.uid);
-
-		pipe.srem(RedisConstant.ENTITY_PREFIX + ev.app + RedisConstant.USER_SUFFIX,ev.uid);
+		pipe.srem(RedisConstant.ENTITY_PREFIX + ev.entity + RedisConstant.USER_SUFFIX,ev.uid);
 
 		String device = null;
+		String lastLoginJson = null;
+
 		Jedis jedis = null;
 		try {
 			device = jedis.get(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.DEVICE_SUFFIX);
+			lastLoginJson = jedis.get(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGIN_SUFFIX);
 		} finally {
 			if( jedis != null ) {
 				state.returnJedis(jedis);
@@ -187,7 +198,19 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 
 		if( device != null ) {
 			pipe.srem(RedisConstant.DEVICE_PREFIX + device + RedisConstant.USER_SUFFIX,ev.uid);
-			pipe.del(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.DEVICE_SUFFIX);
+		}
+
+		if( lastLoginJson != null ) {
+			OnlineEvent lastLogin = state.getGson().fromJson(lastLoginJson,OnlineEvent.class);
+			if( lastLogin != null ) {
+				OnlineSession session = OnlineSession.create(lastLogin,ev);
+				if( session != null ) {
+					String sessionJson = state.getGson().toJson(session);
+					pipe.lpush(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.SESSION_LIST_SUFFIX,sessionJson);
+					pipe.ltrim(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.SESSION_LIST_SUFFIX,0,100);
+				}
+			}
+
 		}
 	}
 }

@@ -18,7 +18,7 @@ import com.echat.storm.analysis.constant.*;
 public class OnlineEvent {
 	private static final Logger log = LoggerFactory.getLogger(OnlineEvent.class);
 
-	public String app;
+	public String entity;
 	public Long ts;
 	public Date date;
 	public String event;
@@ -68,7 +68,7 @@ public class OnlineEvent {
 			log.error("Bad datetime format: " + tuple.getStringByField(FieldConstant.DATETIME_FIELD));
 			return null;
 		}
-		ev.app = tuple.getStringByField(FieldConstant.APP_FIELD);
+		ev.entity = tuple.getStringByField(FieldConstant.APP_FIELD);
 		ev.ts = tuple.getLongByField(FieldConstant.TIMESTAMP_FIELD);
 		ev.event = tuple.getStringByField(FieldConstant.EVENT_FIELD);
 		ev.uid = tuple.getStringByField(FieldConstant.UID_FIELD);

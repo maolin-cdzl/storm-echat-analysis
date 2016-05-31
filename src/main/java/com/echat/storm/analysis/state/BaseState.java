@@ -105,5 +105,17 @@ public class BaseState implements State {
 		}
 	}
 
+	public boolean timelineBefore(String id,String type1,String type2) {
+		Long t1 = getTimeline(type1,id);
+		Long t2 = getTimeline(type2,id);
+		if( t2 == null ) {
+			return true;
+		} else if( t1 == null ) {
+			return false;
+		} else {
+			return t1 < t2;
+		}
+	}
+
 }
 
