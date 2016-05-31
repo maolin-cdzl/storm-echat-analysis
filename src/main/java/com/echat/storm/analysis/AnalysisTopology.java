@@ -257,6 +257,13 @@ public class AnalysisTopology {
 				new Fields(FieldConstant.ENTITY_LOAD_FIELD)
 				);
 
+		onlineStream.partitionPersist(
+				new BaseState.Factory(redisConfig),
+				new Fields(FieldConstant.APP_FIELD,FieldConstant.DEVICE_FIELD),
+				new EntityDevUpdater(),
+				new Fields()
+				);
+
 		TridentState onlineState = onlineStream.partitionPersist(
 				new BaseState.Factory(redisConfig),
 				onlineStream.getOutputFields(),
@@ -293,51 +300,6 @@ public class AnalysisTopology {
 			cluster.shutdown();
 		}
 
-		////////////////////////////////////////////////////////////////
-		/*
-		SpoutConfig spoutConf = new SpoutConfig(
-				new ZkHosts(TopologyConstant.ZOOKEEPER_HOST_LIST), 
-				TopologyConstant.KAFKA_TOPIC,
-				TopologyConstant.ZOOKEEPER_ROOT,
-				TopologyConstant.ZOOKEEPER_PTTSVC_LOG_SPOUT_ID);
-
-		spoutConf.scheme = new SchemeAsMultiScheme(new PttsvcLogInfoScheme());
-		spoutConf.startOffsetTime = -1; // Start from newest messages.
-
-		TopologyBuilder builder = new TopologyBuilder();
-		builder.setSpout(TopologyConstant.SPOUT_INPUT, new KafkaSpout(spoutConf),TopologyConstant.SPORT_INPUT_EXECUTORS); 
-		//builder.setBolt("word-splitter", new KafkaWordSplitter(), 2).shuffleGrouping("kafka-reader");
-		builder.setBolt(TopologyConstant.BOLT_LOG_SPLITER, new PttsvcLogSpliter(),TopologyConstant.BOLT_EVENT_EXECUTORS)
-			.setNumTasks(TopologyConstant.BOLT_EVENT_TASKS)
-			.fieldsGrouping(TopologyConstant.SPOUT_INPUT, new Fields(FieldConstant.APP_FIELD));
-
-
-		JedisPoolConfig poolConfig = new JedisPoolConfig.Builder().setHost("192.168.1.181").setPort(6379).build();
-		builder.setBolt(TopologyConstant.BOLT_STATISTICS_PERSIST,new StatisticsPersist(poolConfig))
-			.shuffleGrouping(TopologyConstant.BOLT_LOG_SPLITER,TopologyConstant.STREAM_APP_LOAD);
-
-
-		Config conf = new Config();
-		conf.setNumWorkers(TopologyConstant.TOPOLOGY_WORKERS);
-
-		String name = AnalysisTopology.class.getSimpleName();
-		if (args != null && args.length > 0) {
-			StormSubmitter.submitTopologyWithProgressBar(name, conf, builder.createTopology());
-		} else {
-			conf.setDebug(true);
-			System.out.println("Create LocalCluster");
-			LocalCluster cluster = new LocalCluster();
-
-			System.out.println("Submit Topology");
-			cluster.submitTopology(name, conf, builder.createTopology());
-			System.out.println("Submit successed");
-
-			Thread.sleep(60000);
-
-			System.out.println("shutdown...");
-			cluster.shutdown();
-		}
-		*/
 	}
 }
 

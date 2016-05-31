@@ -188,6 +188,7 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 
 		Jedis jedis = null;
 		try {
+			jedis = state.getJedis();
 			device = jedis.get(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.DEVICE_SUFFIX);
 			lastLoginJson = jedis.get(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGIN_SUFFIX);
 		} finally {

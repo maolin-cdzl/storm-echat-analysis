@@ -2,6 +2,8 @@ package com.echat.storm.analysis.constant;
 
 public class RedisConstant {
 	static public final String ONLINE_USER_KEY = "online-user";
+	static public final String ENTITY_SET_KEY = "entity-set";
+	static public final String DEVICE_SET_KEY = "dev-set";
 
 	static public final String ENTITY_PREFIX = "app:";
 	static public final String DEVICE_PREFIX = "dev:";
