@@ -1,8 +1,14 @@
-package com.echat.storm.analysis;
+package com.echat.storm.analysis.constant;
 
 public class TopologyConstant {
 	// debug
 	public static final boolean DEBUG = true;
+	public static final String STD_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
+	public static final String[] INPUT_DATETIME_FORMAT = new String[] { 
+		"yyyy-MM-dd HH:mm:ss.SSS",
+		"yyyy/MM/dd HH:mm:ss",
+		"yyyy-MM-dd HH:mm:ss"
+   	};
 
 	// zookeeper
 	public static final String ZOOKEEPER_HOST_LIST = "base001.hdp.echat.com:2181,base002.hdp.echat.com:2181,base003.hdp.echat.com:2181";

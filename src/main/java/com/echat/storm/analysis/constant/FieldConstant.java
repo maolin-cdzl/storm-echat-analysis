@@ -1,4 +1,4 @@
-package com.echat.storm.analysis;
+package com.echat.storm.analysis.constant;
 
 public class FieldConstant {
 	public static final String ENTITY_FIELD = "entity";

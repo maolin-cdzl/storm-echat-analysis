@@ -1,4 +1,4 @@
-package com.echat.storm.analysis;
+package com.echat.storm.analysis.spout;
 
 import org.apache.oro.text.regex.MalformedPatternException;
 import org.apache.oro.text.regex.MatchResult;
@@ -54,7 +54,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 			String datetime = mr.group(2);
 			Long timestamp;
 			try {
-				ts = Long.parseLong(mr.group(3)) / 100L;
+				timestamp = Long.parseLong(mr.group(3)) / 100L;
 			} catch( NumberFormatException e ) {
 				timestamp = null;
 			}

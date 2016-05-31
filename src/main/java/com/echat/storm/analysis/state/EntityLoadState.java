@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.echat.storm.analysis.types.*;
+import com.echat.storm.analysis.constant.*;
 
 public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 	private static final Logger log = LoggerFactory.getLogger(EntityLoadState.class);
@@ -51,8 +52,6 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
         put(StateType.TRANSACTIONAL, new JSONTransactionalSerializer());
         put(StateType.OPAQUE, new JSONOpaqueSerializer());
     }};
-	private static final String DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
-	private static final String[] INPUT_DATETIME_FORMAT = { "yyyy-MM-dd HH:mm:ss" };
 
 	public static class Options implements Serializable {
 		public String keyPrefix = "load-";
@@ -131,7 +130,7 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 		_serializer = serializer;
 		_window = window;
 		_loadmap = new EntityLoadMap();
-		_gson = new GsonBuilder().setDateFormat(DATETIME_FORMAT).create();
+		_gson = new GsonBuilder().setDateFormat(TopologyConstant.STD_DATETIME_FORMAT).create();
 	}
 
 	@Override
@@ -143,7 +142,7 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 			
 			Date time;
 			try {
-				time = DateUtils.parseDate(datetime,INPUT_DATETIME_FORMAT);
+				time = DateUtils.parseDate(datetime,TopologyConstant.INPUT_DATETIME_FORMAT);
 			} catch( ParseException e ) {
 				log.warn("Bad datetime format: " + datetime);
 				continue;
@@ -167,9 +166,9 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 			}
 			if( list.isTooOld(b.time) ) {
 				log.warn("Recv too old report for: "
-						+ DateFormatUtils.format(b.time,DATETIME_FORMAT) 
+						+ DateFormatUtils.format(b.time,TopologyConstant.STD_DATETIME_FORMAT) 
 						+ ", current earliest is: "
-						+ DateFormatUtils.format(list.getEarliestDate(),DATETIME_FORMAT));
+						+ DateFormatUtils.format(list.getEarliestDate(),TopologyConstant.STD_DATETIME_FORMAT));
 				continue;
 			}
 			list.merge(b);
@@ -191,7 +190,7 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 			Pipeline pipe = jedis.pipelined();
 
 			for(EntityLoadBucket bucket : buckets) {
-				String[] reports = bucket.toReport(_gson,DATETIME_FORMAT);
+				String[] reports = bucket.toReport(_gson,TopologyConstant.STD_DATETIME_FORMAT);
 				if( reports != null ) {
 					final String entity = reports[0];
 					final String json = reports[2];

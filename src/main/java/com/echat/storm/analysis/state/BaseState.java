@@ -14,18 +14,24 @@ import redis.clients.jedis.JedisPool;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.echat.storm.analysis.constant.*;
 import com.echat.storm.analysis.types.*;
 import com.echat.storm.analysis.utils.*;
 
 public class BaseState implements State {
-	private static final String OUTPUT_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
+	private static final Logger log = LoggerFactory.getLogger(BaseState.class);
 
     @Override
     public void beginCommit(Long txid) {
+		log.info("beginCommit txid: " + txid.toString());
     }
 
     @Override
     public void commit(Long txid) {
+		log.info("commit txid: " + txid.toString());
     }
 
     public static class Factory implements StateFactory {
@@ -57,7 +63,7 @@ public class BaseState implements State {
     public BaseState(JedisPool jedisPool,int maxCacheSize) {
         this.jedisPool = jedisPool;
 		timelineMap = new LRUHashMap<String,Long>(maxCacheSize);
-		gson = new GsonBuilder().setDateFormat(OUTPUT_DATETIME_FORMAT).build();
+		gson = new GsonBuilder().setDateFormat(TopologyConstant.STD_DATETIME_FORMAT).create();
     }
 
     public Jedis getJedis() {

@@ -3,7 +3,9 @@ package com.echat.storm.analysis.state;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 
+import backtype.storm.tuple.Values;
 import storm.trident.tuple.TridentTuple;
 import storm.trident.operation.TridentCollector;
 import storm.trident.state.State;
@@ -25,10 +27,6 @@ import com.echat.storm.analysis.types.*;
 import com.echat.storm.analysis.utils.*;
 
 public class OnlineUpdater extends BaseStateUpdater<BaseState> {
-	private static final String[] INPUT_DATETIME_FORMAT = {
-		"yyyy-MM-dd HH:mm:ss",
-		"yyyy-MM-dd HH:mm:ss.SSS",
-	};
 	private static final String TIMELINE_ONLINE = "online-";
 	private static final String TIMELINE_OFFLINE = "offline-";
 	private static final Logger log = LoggerFactory.getLogger(OnlineUpdater.class);
@@ -38,6 +36,7 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 
 	@Override
 	public void updateState(BaseState state, List<TridentTuple> inputs,TridentCollector collector) {
+		log.info("updateState, input tuple count: " + inputs.size());
 		for(TridentTuple tuple : inputs) {
 			OnlineEvent ev = OnlineEvent.fromTuple(tuple);
 			if( ev != null ) {
@@ -45,10 +44,10 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 			}
 		}
 
-		Jedis jedis;
+		Jedis jedis = null;
 		try {
 			jedis = state.getJedis();
-			Pipeline pipe = jedis.piplined();
+			Pipeline pipe = jedis.pipelined();
 			for (List<OnlineEvent> l : _events.values() ) {
 				for(OnlineEvent ev : l) {
 					if( TopologyConstant.EVENT_LOGIN.equals(ev.event) ) {
@@ -63,8 +62,8 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 						log.error("Unknown event: " + ev.event);
 					}
 				}
+				pipe.sync();
 			}
-			pipe.sync();
 		} finally {
 			if( jedis != null ) {
 				state.returnJedis(jedis);
@@ -76,7 +75,7 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 	private void put(OnlineEvent ev) {
 		List<OnlineEvent> l = _events.get(ev.uid);
 		if( l == null ) {
-			l = new SortedList<OnlineEvent>(OnlineEvent.tsComparator());
+			l = new SortedLinkedList<OnlineEvent>(OnlineEvent.tsComparator());
 			_events.put(ev.uid,l);
 		}
 		l.add(ev);
@@ -84,16 +83,31 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 
 	private void processLogin(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		if( state.updateTimeline(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
-			String val = state.getGson().toJson(ev);
-			pipe.set(RedisConstranst.USER_PREFIX + ev.uid + RedisConstranst.ONLINE_SUFFIX,content);
+			String content = state.getGson().toJson(ev);
+			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGIN_SUFFIX,content);
 		}
 
-		if( ! state.isTooOld(TIMELINE_OFFLINE,ev,uid,ev.ts) ) {
-			// set user status to online
-			pipe.sadd(RedisConstranst.ONLINE_USER_KEY,ev.uid);
-			pipe.sadd(RedisConstranst.APP_PREFIX + ev.app + RedisConstranst.ONLINE_SUFFIX,ev.uid);
-			if( ev.device != null ) {
-				pipe.sadd(RedisConstranst.DEVICE_PREFIX + ev.device + RedisConstranst.USER_SUFFIX,ev.uid);
+		if( ! state.isTooOld(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
+			setUserOnline(state,pipe,collector,ev);
+		}
+
+		String lastLogoutJson = null;
+		Jedis jedis = null;
+		try {
+			jedis = state.getJedis();
+			lastLogoutJson = jedis.get(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGOUT_SUFFIX);
+		} finally {
+			if( jedis != null ) {
+				state.returnJedis(jedis);
+			}
+		}
+
+		if( lastLogoutJson != null ) {
+			OnlineEvent lastLogout = state.getGson().fromJson(lastLogoutJson,OnlineEvent.class);
+			if( lastLogout != null ) {
+				if( ev.date.after(lastLogout.date) && TimeUnit.MILLISECONDS.toSeconds(ev.date.getTime() - lastLogout.date.getTime()) < 60) {
+					stormAndEmitConnectionBroken(state,pipe,collector,lastLogout);
+				}
 			}
 		}
 	}
@@ -101,52 +115,80 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 	private void processRelogin(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		if( state.updateTimeline(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
 			String content = state.getGson().toJson(ev);
-			pipe.set(RedisConstranst.USER_PREFIX + ev.uid + RedisConstranst.ONLINE_SUFFIX,content);
+			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGIN_SUFFIX,content);
 		}
 
-		if( ! state.isTooOld(TIMELINE_OFFLINE,ev,uid,ev.ts) ) {
-			// set user status to online
-			pipe.sadd(RedisConstranst.ONLINE_USER_KEY,ev.uid);
-			pipe.sadd(RedisConstranst.APP_PREFIX + ev.app + RedisConstranst.ONLINE_SUFFIX,ev.uid);
-			if( ev.device != null ) {
-				pipe.sadd(RedisConstranst.DEVICE_PREFIX + ev.device + RedisConstranst.USER_SUFFIX,ev.uid);
-			}
+		if( ! state.isTooOld(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
+			setUserOnline(state,pipe,collector,ev);
 		}
 
-		stormAndEmitConnectionBroken(pipe,collector,ev);
+		stormAndEmitConnectionBroken(state,pipe,collector,ev);
 	}
 
 	private void processBroken(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		if( state.updateTimeline(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
 			String content = state.getGson().toJson(ev);
-			pipe.set(RedisConstranst.USER_PREFIX + ev.uid + RedisConstranst.OFFLINE_SUFFIX,content);
+			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGOUT_SUFFIX,content);
 		}
 
-		if( ! state.isTooOld(TIMELINE_ONLINE,ev,uid,ev.ts) ) {
-			// set user status to offline
-			pipe.srem(RedisConstranst.ONLINE_USER_KEY,ev.uid);
-			pipe.srem(RedisConstranst.APP_PREFIX + ev.app + RedisConstranst.ONLINE_SUFFIX,ev.uid);
+		if( ! state.isTooOld(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
+			setUserOffline(state,pipe,collector,ev);
 		}
 	}
 
 	private void processLogout(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		if( state.updateTimeline(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
 			String content = state.getGson().toJson(ev);
-			pipe.set(RedisConstranst.USER_PREFIX + ev.uid + RedisConstranst.OFFLINE_SUFFIX,content);
+			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGOUT_SUFFIX,content);
 		}
 
-		if( ! state.isTooOld(TIMELINE_ONLINE,ev,uid,ev.ts) ) {
-			// set user status to offline
-			pipe.srem(RedisConstranst.ONLINE_USER_KEY,ev.uid);
-			pipe.srem(RedisConstranst.APP_PREFIX + ev.app + RedisConstranst.ONLINE_SUFFIX,ev.uid);
+		if( ! state.isTooOld(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
+			setUserOffline(state,pipe,collector,ev);
 		}
 	}
 
-	private void stormAndEmitConnectionBroken(Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
+	private void stormAndEmitConnectionBroken(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		String content = state.getGson().toJson(ev);
-		pipe.lpush(RedisConstranst.BROKEN_LIST_KEY,content);
-		pipe.ltrim(RedisConstranst.BROKEN_LIST_KEY,0,RedisConstranst.BROKEN_LIST_MAX_SIZE);
+		pipe.lpush(RedisConstant.BROKEN_LIST_KEY,content);
+		pipe.ltrim(RedisConstant.BROKEN_LIST_KEY,0,RedisConstant.BROKEN_LIST_MAX_SIZE);
 		collector.emit(new Values(content));
+	}
+
+	private void setUserOnline(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
+		pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.STATE_SUFFIX,RedisConstant.STATE_ONLINE);
+		pipe.sadd(RedisConstant.ONLINE_USER_KEY,ev.uid);
+
+		pipe.sadd(RedisConstant.ENTITY_PREFIX + ev.app + RedisConstant.USER_SUFFIX,ev.uid);
+		pipe.sadd(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.ENTITY_SET_SUFFIX,ev.app);
+
+		if( ev.device != null ) {
+			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.DEVICE_SUFFIX,ev.device);
+			pipe.sadd(RedisConstant.DEVICE_PREFIX + ev.device + RedisConstant.USER_SUFFIX,ev.uid);
+			pipe.sadd(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.DEVICE_SET_SUFFIX,ev.device);
+		}
+
+	}
+
+	private void setUserOffline(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
+		pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.STATE_SUFFIX,RedisConstant.STATE_OFFLINE);
+		pipe.srem(RedisConstant.ONLINE_USER_KEY,ev.uid);
+
+		pipe.srem(RedisConstant.ENTITY_PREFIX + ev.app + RedisConstant.USER_SUFFIX,ev.uid);
+
+		String device = null;
+		Jedis jedis = null;
+		try {
+			device = jedis.get(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.DEVICE_SUFFIX);
+		} finally {
+			if( jedis != null ) {
+				state.returnJedis(jedis);
+			}
+		}
+
+		if( device != null ) {
+			pipe.srem(RedisConstant.DEVICE_PREFIX + device + RedisConstant.USER_SUFFIX,ev.uid);
+			pipe.del(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.DEVICE_SUFFIX);
+		}
 	}
 }
 

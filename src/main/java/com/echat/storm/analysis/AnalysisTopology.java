@@ -38,6 +38,7 @@ import java.util.Arrays;
 import com.echat.storm.analysis.constant.*;
 import com.echat.storm.analysis.types.*;
 import com.echat.storm.analysis.operation.*;
+import com.echat.storm.analysis.spout.*;
 import com.echat.storm.analysis.state.*;
 
 public class AnalysisTopology {
@@ -64,7 +65,7 @@ public class AnalysisTopology {
 		// event streams
 		Stream eventStream = infoStream.each(new Fields(FieldConstant.CONTENT_FIELD),new GetEvent(),new Fields(FieldConstant.EVENT_FIELD));
 
-		GroupedStream onlineStream = eventStream.each(
+		Stream onlineStream = eventStream.each(
 				new Fields(FieldConstant.EVENT_FIELD),
 				new EventFilter(new String[]{
 					TopologyConstant.EVENT_LOGIN,
@@ -83,7 +84,6 @@ public class AnalysisTopology {
 					FieldConstant.VERSION_FIELD,
 					FieldConstant.IMSI_FIELD,
 					FieldConstant.EXPECT_PAYLOAD_FIELD))
-			.groupBy(new Fields(FieldConstant.UID_FIELD))
 			.name(TopologyConstant.STREAM_EVENT_GROUP_ONLINE);
 
 		GroupedStream loginFailedStream = eventStream.each(
@@ -259,6 +259,7 @@ public class AnalysisTopology {
 
 		TridentState onlineState = onlineStream.partitionPersist(
 				new BaseState.Factory(redisConfig),
+				onlineStream.getOutputFields(),
 				new OnlineUpdater(),
 				new Fields(FieldConstant.BROKEN_EVENT_FIELD)
 				);

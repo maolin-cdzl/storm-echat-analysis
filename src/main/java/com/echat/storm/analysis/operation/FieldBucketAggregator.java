@@ -20,17 +20,12 @@ import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.echat.storm.analysis.constant.*;
 import com.echat.storm.analysis.types.*;
 
 
 public class FieldBucketAggregator extends BaseAggregator<EntityLoadMap> {
 	private static final Logger log = LoggerFactory.getLogger(FieldBucketAggregator.class);
-	private static final String[] INPUT_DATETIME_FORMAT = new String[] { 
-		"yyyy-MM-dd HH:mm:ss.SSS",
-		"yyyy/MM/dd HH:mm:ss",
-		"yyyy-MM-dd HH:mm:ss"
-   	};
-	private static final String OUTPUT_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
 	private final String _entityField;
 	private final String _dateField;
@@ -59,7 +54,7 @@ public class FieldBucketAggregator extends BaseAggregator<EntityLoadMap> {
 
 		Date date;
 		try {
-			date = DateUtils.parseDate(datetime,INPUT_DATETIME_FORMAT);
+			date = DateUtils.parseDate(datetime,TopologyConstant.INPUT_DATETIME_FORMAT);
 		} catch( ParseException e ) {
 			log.warn("Bad datetime format: " + datetime);
 			return;
@@ -70,8 +65,8 @@ public class FieldBucketAggregator extends BaseAggregator<EntityLoadMap> {
 
 	@Override
     public void complete(EntityLoadMap state, TridentCollector collector) {
-		Gson gson = new GsonBuilder().setDateFormat(OUTPUT_DATETIME_FORMAT).create();
-		List<String[]> reports = state.toReports(gson,OUTPUT_DATETIME_FORMAT);
+		Gson gson = new GsonBuilder().setDateFormat(TopologyConstant.STD_DATETIME_FORMAT).create();
+		List<String[]> reports = state.toReports(gson,TopologyConstant.STD_DATETIME_FORMAT);
 		if( reports == null ) {
 			return;
 		}

@@ -17,13 +17,13 @@ import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.echat.storm.analysis.constant.*;
 import com.echat.storm.analysis.types.*;
 
 
 public class EntityLoadAggregator implements CombinerAggregator<EntityLoadBucket> {
 	private static final Logger log = LoggerFactory.getLogger(EntityLoadAggregator.class);
 
-	private static final String DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
 	private Gson _gson;
 
 	@Override
@@ -43,7 +43,7 @@ public class EntityLoadAggregator implements CombinerAggregator<EntityLoadBucket
 
 	private Gson getGson() {
 		if( _gson == null ) {
-			_gson = new GsonBuilder().setDateFormat(DATETIME_FORMAT).create();
+			_gson = new GsonBuilder().setDateFormat(TopologyConstant.STD_DATETIME_FORMAT).create();
 		}
 		return _gson;
 	}

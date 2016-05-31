@@ -1,6 +1,7 @@
 package com.echat.storm.analysis.types;
 
 import java.util.Date;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.text.ParseException;
 
@@ -12,7 +13,7 @@ import org.apache.commons.lang.time.DateFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.echat.storm.analysis.constant.FieldConstant;
+import com.echat.storm.analysis.constant.*;
 
 public class OnlineEvent {
 	private static final Logger log = LoggerFactory.getLogger(OnlineEvent.class);
@@ -44,24 +45,25 @@ public class OnlineEvent {
 			}
 
 			@Override
-			public boolean equals(OnlineEvent e1,OnlineEvent e2) {
-				return e1.ts == e2.ts;
+			public boolean equals(Object other) {
+				return (other.getClass().isAssignableFrom(this.getClass()));
 			}
 		};
 	}
 
 	static public OnlineEvent fromTuple(TridentTuple tuple) {
-		if( !tuple.contain(FieldConstant.APP_FIELD) || 
+		if( !tuple.contains(FieldConstant.APP_FIELD) || 
 			!tuple.contains(FieldConstant.TIMESTAMP_FIELD) ||
 			!tuple.contains(FieldConstant.DATETIME_FIELD) ||
 			!tuple.contains(FieldConstant.EVENT_FIELD) ||
 			!tuple.contains(FieldConstant.UID_FIELD) ) {
+				log.error("missing fields: " + Arrays.toString(tuple.getFields().toList().toArray()));
 				return null;
 		}
 		OnlineEvent ev = new OnlineEvent();
 
 		try {
-			ev.date = DateUtils.parseDate(tuple.getStringByField(FieldConstant.DATETIME_FIELD),INPUT_DATETIME_FORMAT);
+			ev.date = DateUtils.parseDate(tuple.getStringByField(FieldConstant.DATETIME_FIELD),TopologyConstant.INPUT_DATETIME_FORMAT);
 		} catch( ParseException e) {
 			log.error("Bad datetime format: " + tuple.getStringByField(FieldConstant.DATETIME_FIELD));
 			return null;
