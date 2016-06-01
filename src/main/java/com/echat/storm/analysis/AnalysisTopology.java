@@ -55,7 +55,7 @@ public class AnalysisTopology {
 		spoutConf.startOffsetTime = kafka.api.OffsetRequest.LatestTime(); 
 		//spoutConf.ignoreZkOffsets = true;
 
-		Stream logStream = topology.newStream(TopologyConstant.SPOUT_INPUT,new OpaqueTridentKafkaSpout(spoutConf)).partitionBy(new Fields(FieldConstant.APP_FIELD)).parallelismHint(TopologyConstant.SPORT_INPUT_EXECUTORS); 
+		Stream logStream = topology.newStream(TopologyConstant.SPOUT_INPUT,new OpaqueTridentKafkaSpout(spoutConf)).partitionBy(new Fields(FieldConstant.ENTITY_FIELD)).parallelismHint(TopologyConstant.SPORT_INPUT_EXECUTORS); 
 
 		Stream fatalStream = logStream.each(new Fields(FieldConstant.LEVEL_FIELD),new LevelFilter("FATAL")).name(TopologyConstant.STREAM_FATAL);
 		Stream errorStream = logStream.each(new Fields(FieldConstant.LEVEL_FIELD),new LevelFilter("ERROR")).name(TopologyConstant.STREAM_ERROR);
@@ -238,12 +238,12 @@ public class AnalysisTopology {
 		// log level count
 		Stream loadStream = topology.merge(
 			logStream.partitionAggregate(
-				new Fields(FieldConstant.APP_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.LEVEL_FIELD),
-				new FieldBucketAggregator(FieldConstant.APP_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.LEVEL_FIELD),
+				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.LEVEL_FIELD),
+				new FieldBucketAggregator(FieldConstant.ENTITY_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.LEVEL_FIELD),
 				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.BUCKET_FIELD,FieldConstant.LOAD_FIELD)),
 			eventStream.partitionAggregate(
-				new Fields(FieldConstant.APP_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.EVENT_FIELD),
-				new FieldBucketAggregator(FieldConstant.APP_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.EVENT_FIELD),
+				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.EVENT_FIELD),
+				new FieldBucketAggregator(FieldConstant.ENTITY_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.EVENT_FIELD),
 				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.BUCKET_FIELD,FieldConstant.LOAD_FIELD))
 		);
 
@@ -259,7 +259,7 @@ public class AnalysisTopology {
 
 		onlineStream.partitionPersist(
 				new BaseState.Factory(redisConfig),
-				new Fields(FieldConstant.APP_FIELD,FieldConstant.DEVICE_FIELD),
+				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.DEVICE_FIELD),
 				new EntityDevUpdater(),
 				new Fields()
 				);

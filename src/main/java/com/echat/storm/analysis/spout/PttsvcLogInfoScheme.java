@@ -50,7 +50,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 		PatternMatcher pm = new Perl5Matcher();
 		if( pm.contains(line,pattern) ) {
 			MatchResult mr = pm.getMatch();
-			String app = mr.group(1);
+			String entity = mr.group(1);
 			String datetime = mr.group(2);
 			Long timestamp;
 			try {
@@ -61,8 +61,8 @@ public class PttsvcLogInfoScheme implements Scheme {
 			String level = mr.group(4);
 			String content = mr.group(5);
 
-			log.debug("Kafka tuple: " + app + "\t" + datetime + "\t" + level + "\t" + content);
-			return new Values(app,datetime,timestamp,level,content);
+			log.debug("Kafka tuple: " + entity + "\t" + datetime + "\t" + level + "\t" + content);
+			return new Values(entity,datetime,timestamp,level,content);
 		} else {
 			return null;
 		}
@@ -70,7 +70,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 
 	public Fields getOutputFields() {
 		return new Fields(
-				FieldConstant.APP_FIELD,
+				FieldConstant.ENTITY_FIELD,
 				FieldConstant.DATETIME_FIELD,
 				FieldConstant.TIMESTAMP_FIELD,
 				FieldConstant.LEVEL_FIELD,

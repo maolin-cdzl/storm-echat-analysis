@@ -30,7 +30,7 @@ public class TopologyConstant {
 	public static final int BOLT_EVENT_EXECUTORS = 3;
 	public static final int BOLT_EVENT_TASKS = BOLT_EVENT_EXECUTORS;
 
-	public static final String STREAM_APP_LOAD = "s-appload";
+	public static final String STREAM_ENTITY_LOAD = "s-entityload";
 	public static final String STREAM_WARN = "s-warn";
 	public static final String STREAM_ERROR = "s-error";
 	public static final String STREAM_FATAL = "s-fatal";
@@ -108,8 +108,8 @@ public class TopologyConstant {
 
 	// bolt
 	public static final String BOLT_STATISTICS_PERSIST = "bolt-stat-persist";
-	public static final String KEY_APP_LOAD_PREFIX = "appload-";
-	public static final long MAX_APP_LOAD_LENGTH = 3600;
+	public static final String KEY_ENTITY_LOAD_PREFIX = "entityload-";
+	public static final long MAX_ENTITY_LOAD_LENGTH = 3600;
 
 	public static final int LOAD_SPLIDING_WINDOW_IN_SECONDS = 5;
 }

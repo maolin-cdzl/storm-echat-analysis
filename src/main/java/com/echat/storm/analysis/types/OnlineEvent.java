@@ -52,7 +52,7 @@ public class OnlineEvent {
 	}
 
 	static public OnlineEvent fromTuple(TridentTuple tuple) {
-		if( !tuple.contains(FieldConstant.APP_FIELD) || 
+		if( !tuple.contains(FieldConstant.ENTITY_FIELD) || 
 			!tuple.contains(FieldConstant.TIMESTAMP_FIELD) ||
 			!tuple.contains(FieldConstant.DATETIME_FIELD) ||
 			!tuple.contains(FieldConstant.EVENT_FIELD) ||
@@ -68,7 +68,7 @@ public class OnlineEvent {
 			log.error("Bad datetime format: " + tuple.getStringByField(FieldConstant.DATETIME_FIELD));
 			return null;
 		}
-		ev.entity = tuple.getStringByField(FieldConstant.APP_FIELD);
+		ev.entity = tuple.getStringByField(FieldConstant.ENTITY_FIELD);
 		ev.ts = tuple.getLongByField(FieldConstant.TIMESTAMP_FIELD);
 		ev.event = tuple.getStringByField(FieldConstant.EVENT_FIELD);
 		ev.uid = tuple.getStringByField(FieldConstant.UID_FIELD);

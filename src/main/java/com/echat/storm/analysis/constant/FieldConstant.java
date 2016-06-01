@@ -6,13 +6,10 @@ public class FieldConstant {
 	public static final String TIME_END_FIELD = "tvend";
 	public static final String BUCKET_FIELD = "bucket";
 
-	public static final String APP_FIELD = "app";
 	public static final String DATETIME_FIELD = "datetime";
 	public static final String TIMESTAMP_FIELD = "ts";
 	public static final String LEVEL_FIELD = "level";
 	public static final String CONTENT_FIELD = "content";
-
-	public static final String APP_LOAD_FIELD = "load";
 
 	public static final String VALUE_FIELD = "value";
 	public static final String SW_FIELD = "sw";
@@ -35,6 +32,5 @@ public class FieldConstant {
 
 	public static final String LOAD_FIELD = "load";
 	public static final String ENTITY_LOAD_FIELD = "entity-load";
-
 	public static final String BROKEN_EVENT_FIELD = "broken-event";
 }

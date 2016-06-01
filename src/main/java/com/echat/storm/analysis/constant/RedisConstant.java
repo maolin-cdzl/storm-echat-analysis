@@ -5,7 +5,7 @@ public class RedisConstant {
 	static public final String ENTITY_SET_KEY = "entity-set";
 	static public final String DEVICE_SET_KEY = "dev-set";
 
-	static public final String ENTITY_PREFIX = "app:";
+	static public final String ENTITY_PREFIX = "entity:";
 	static public final String DEVICE_PREFIX = "dev:";
 	static public final String USER_PREFIX = "user:";
 

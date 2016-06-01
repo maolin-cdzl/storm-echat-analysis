@@ -24,10 +24,19 @@ public class EntityDevUpdater extends BaseStateUpdater<BaseState> {
 		HashSet<String> entities = new HashSet<String>();
 		HashSet<String> devices = new HashSet<String>();
 
+		String e;
+		String d;
+
 		for(TridentTuple tuple : inputs) {
-			entities.add( tuple.getStringByField(FieldConstant.APP_FIELD) );
+			e = tuple.getStringByField(FieldConstant.ENTITY_FIELD);
+			if( e != null ) {
+				entities.add( e);
+			}
 			if( tuple.contains(FieldConstant.DEVICE_FIELD) ) {
-				devices.add( tuple.getStringByField(FieldConstant.DEVICE_FIELD) );
+				d = tuple.getStringByField(FieldConstant.DEVICE_FIELD);
+				if( d != null ) {
+					devices.add( d );
+				}
 			}
 		}
 
