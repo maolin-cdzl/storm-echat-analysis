@@ -4,10 +4,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class LRUHashMap<A, B> extends LinkedHashMap<A, B> {
-    private int _maxSize;
+    private final int _maxSize;
 
     public LRUHashMap(int maxSize) {
-        super(maxSize + 1, 1.0f, true);
+        super(maxSize + 1, 0.75f, true);
         _maxSize = maxSize;
     }
     
