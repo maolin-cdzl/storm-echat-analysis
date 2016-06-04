@@ -247,25 +247,24 @@ public class AnalysisTopology {
 				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.BUCKET_FIELD,FieldConstant.LOAD_FIELD))
 		);
 
-		RedisConfig redisConfig = new RedisConfig.Builder().setHost("192.168.1.181").setPort(6379).build();
 
 		//log.info("loadStream fields: " + Arrays.toString(loadStream.getOutputFields().toList().toArray()));
 		TridentState loadState = loadStream.groupBy(new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.BUCKET_FIELD)).persistentAggregate(
-				EntityLoadState.nonTransactional(redisConfig),
+				EntityLoadState.nonTransactional(TopologyConstant.REDIS_CONFIG),
 				new Fields(FieldConstant.LOAD_FIELD),
 				new EntityLoadAggregator(),
 				new Fields(FieldConstant.ENTITY_LOAD_FIELD)
 				);
 
 		onlineStream.partitionPersist(
-				new BaseState.Factory(redisConfig),
+				new BaseState.Factory(TopologyConstant.REDIS_CONFIG),
 				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.DEVICE_FIELD),
 				new EntityDevUpdater(),
 				new Fields()
 				);
 
 		TridentState onlineState = onlineStream.partitionPersist(
-				new BaseState.Factory(redisConfig),
+				new BaseState.Factory(TopologyConstant.REDIS_CONFIG),
 				onlineStream.getOutputFields(),
 				new OnlineUpdater(),
 				new Fields(FieldConstant.BROKEN_EVENT_FIELD)

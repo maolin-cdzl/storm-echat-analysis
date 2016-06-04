@@ -1,5 +1,7 @@
 package com.echat.storm.analysis.constant;
 
+import com.echat.storm.analysis.types.RedisConfig;
+
 public class TopologyConstant {
 	// debug
 	public static final boolean DEBUG = true;
@@ -9,6 +11,7 @@ public class TopologyConstant {
 		"yyyy/MM/dd HH:mm:ss",
 		"yyyy-MM-dd HH:mm:ss"
    	};
+	public static final RedisConfig REDIS_CONFIG = new RedisConfig.Builder().setHost("192.168.1.181").setPort(6379).build();
 
 	// zookeeper
 	public static final String ZOOKEEPER_HOST_LIST = "base001.hdp.echat.com:2181,base002.hdp.echat.com:2181,base003.hdp.echat.com:2181";
