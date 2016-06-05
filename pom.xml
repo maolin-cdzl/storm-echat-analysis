@@ -22,6 +22,12 @@
 		<type>jar</type>
 	</dependency>
 
+	<dependency>
+  		<groupId>org.apache.storm</groupId>
+  		<artifactId>storm-hbase</artifactId>
+  		<version>0.10.0</version>
+	</dependency>
+
   	<dependency>
   		<groupId>org.apache.kafka</groupId>
   		<artifactId>kafka_2.11</artifactId>
