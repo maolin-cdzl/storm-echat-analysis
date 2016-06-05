@@ -16,6 +16,8 @@ public class FieldConstant {
 	public static final String COUNT_FIELD = "count";
 
 	public static final String EVENT_FIELD = "event";
+	public static final String COMPANY_FIELD = "company";
+	public static final String AGENT_FIELD = "agent";
 	public static final String UID_FIELD = "uid";
 	public static final String GID_FIELD = "gid";
 	public static final String CTX_FIELD = "ctx";

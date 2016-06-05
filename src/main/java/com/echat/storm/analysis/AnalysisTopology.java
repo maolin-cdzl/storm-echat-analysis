@@ -83,7 +83,10 @@ public class AnalysisTopology {
 					FieldConstant.DEVICE_ID_FIELD,
 					FieldConstant.VERSION_FIELD,
 					FieldConstant.IMSI_FIELD,
-					FieldConstant.EXPECT_PAYLOAD_FIELD))
+					FieldConstant.EXPECT_PAYLOAD_FIELD,
+					FieldConstant.COMPANY_FIELD,
+					FieldConstant.AGENT_FIELD,
+					))
 			.name(TopologyConstant.STREAM_EVENT_GROUP_ONLINE);
 
 		GroupedStream loginFailedStream = eventStream.each(

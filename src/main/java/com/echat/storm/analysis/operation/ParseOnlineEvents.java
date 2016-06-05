@@ -15,13 +15,18 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.echat.storm.analysis.utils.UserOrgInfoReader;
+import com.echat.storm.analysis.utils.UserOrgInfoReader.OrganizationInfo;
+
 public class ParseOnlineEvents extends BaseFunction {
 	private static final Logger log = LoggerFactory.getLogger(ParseOnlineEvents.class);
 	private GetKeyValues reg;
+	private UserOrgInfoReader orgReader;
 
 	@Override
 	public void prepare(Map conf, TridentOperationContext context) {
 		reg = new GetKeyValues();
+		orgReader = new UserOrgInfoReader(TopologyConstant.REDIS_CONFIG);
 	}
 
 	@Override
@@ -69,7 +74,14 @@ public class ParseOnlineEvents extends BaseFunction {
 			devid = "esn-" + esn;
 		}
 		if( uid != null ) {
-			return new Values(uid,ctx,ip,device,devid,version,imsi,expect_payload,null);
+			OrganizationInfo org = orgReader.search(uid);
+			String company = null;
+			String agent = null;
+			if( org != null ) {
+				company = org.company;
+				agent = org.agent;
+			}
+			return new Values(uid,ctx,ip,device,devid,version,imsi,expect_payload,company,agent);
 		} else {
 			return null;
 		}
@@ -94,7 +106,7 @@ public class ParseOnlineEvents extends BaseFunction {
 			devid = "esn-" + esn;
 		}
 		if( uid != null ) {
-			return new Values(uid,ctx,ip,device,devid,version,imsi,expect_payload);
+			return new Values(uid,ctx,ip,device,devid,version,imsi,expect_payload,null,null);
 		} else {
 			return null;
 		}
@@ -105,7 +117,7 @@ public class ParseOnlineEvents extends BaseFunction {
 		String uid = keys.get("uid");
 		String ip = keys.get("address");
 		if( uid != null ) {
-			return new Values(uid,null,ip,null,null,null,null,null);
+			return new Values(uid,null,ip,null,null,null,null,null,null,null);
 		} else {
 			return null;
 		}
@@ -117,7 +129,7 @@ public class ParseOnlineEvents extends BaseFunction {
 		String ip = keys.get("address");
 
 		if( uid != null ) {
-			return new Values(uid,null,ip,null,null,null,null,null);
+			return new Values(uid,null,ip,null,null,null,null,null,null,null);
 		} else {
 			return null;
 		}
