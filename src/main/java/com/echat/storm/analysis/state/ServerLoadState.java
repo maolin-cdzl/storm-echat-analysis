@@ -45,8 +45,8 @@ import org.slf4j.LoggerFactory;
 import com.echat.storm.analysis.types.*;
 import com.echat.storm.analysis.constant.*;
 
-public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
-	private static final Logger log = LoggerFactory.getLogger(EntityLoadState.class);
+public class ServerLoadState implements IBackingMap<ServerLoadBucket> {
+	private static final Logger log = LoggerFactory.getLogger(ServerLoadState.class);
 	private static final Map<StateType, Serializer> DEFAULT_SERIALZERS = new HashMap<StateType, Serializer>() {{
         put(StateType.NON_TRANSACTIONAL, new JSONNonTransactionalSerializer());
         put(StateType.TRANSACTIONAL, new JSONTransactionalSerializer());
@@ -85,16 +85,16 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 			JedisPool jedisPool = new JedisPool(DEFAULT_POOL_CONFIG,_conf.host,_conf.port);
 			Serializer serializer = getSerializer();
 
-			CachedMap c = new CachedMap(new EntityLoadState(jedisPool,_opts.keyPrefix,_opts.window,serializer),_opts.localCacheSize);
+			CachedMap c = new CachedMap(new ServerLoadState(jedisPool,_opts.keyPrefix,_opts.window,serializer),_opts.localCacheSize);
 
 			MapState ms;
 			if(_type == StateType.NON_TRANSACTIONAL) {
-                ms = NonTransactionalMap.<EntityLoadBucket>build(c);
+                ms = NonTransactionalMap.<ServerLoadBucket>build(c);
 				/*
             } else if(_type==StateType.OPAQUE) {
-                ms = OpaqueMap.<EntityLoadBucket>build(c);
+                ms = OpaqueMap.<ServerLoadBucket>build(c);
             } else if(_type==StateType.TRANSACTIONAL){
-                ms = TransactionalMap.<EntityLoadBucket>build(c);
+                ms = TransactionalMap.<ServerLoadBucket>build(c);
 				*/
             } else {
                 throw new RuntimeException("Unknown state type: " + _type);
@@ -120,24 +120,24 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 	private String					_keyPrefix;
 	private JedisPool				_pool;
 	private Serializer				_serializer;
-	private EntityLoadMap			_loadmap;
+	private ServerLoadMap			_loadmap;
 	private int						_window;
 	private Gson					_gson;
 
-	public EntityLoadState(JedisPool pool,String keyPrefix,int window,Serializer<EntityLoadBucket> serializer) {
+	public ServerLoadState(JedisPool pool,String keyPrefix,int window,Serializer<ServerLoadBucket> serializer) {
 		_pool = pool;
 		_keyPrefix = keyPrefix;
 		_serializer = serializer;
 		_window = window;
-		_loadmap = new EntityLoadMap();
+		_loadmap = new ServerLoadMap();
 		_gson = new GsonBuilder().setDateFormat(TopologyConstant.STD_DATETIME_FORMAT).create();
 	}
 
 	@Override
-	public List<EntityLoadBucket> multiGet(List<List<Object>> keys) {
-		List<EntityLoadBucket> ret = new ArrayList<EntityLoadBucket>(keys.size());
+	public List<ServerLoadBucket> multiGet(List<List<Object>> keys) {
+		List<ServerLoadBucket> ret = new ArrayList<ServerLoadBucket>(keys.size());
 		for(List<Object> key: keys) {
-			String entity = key.get(0).toString();
+			String server = key.get(0).toString();
 			String datetime = key.get(1).toString();
 			
 			Date time;
@@ -147,19 +147,19 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 				log.warn("Bad datetime format: " + datetime);
 				continue;
 			}
-			ret.add( _loadmap.find(entity,time) );
+			ret.add( _loadmap.find(server,time) );
 		}
 		return ret;
 	}
 
 	@Override
-	public void multiPut(List<List<Object>> keys,List<EntityLoadBucket> vals) {
-		LinkedList<EntityLoadBucket> toPubs = new LinkedList<EntityLoadBucket>();
-		for(EntityLoadBucket b : vals) {
-			if( b == null || b.entity == null ) {
+	public void multiPut(List<List<Object>> keys,List<ServerLoadBucket> vals) {
+		LinkedList<ServerLoadBucket> toPubs = new LinkedList<ServerLoadBucket>();
+		for(ServerLoadBucket b : vals) {
+			if( b == null || b.server == null ) {
 				continue;
 			}
-			EntityLoadList list = _loadmap.find(b.entity);
+			ServerLoadList list = _loadmap.find(b.server);
 			if( list == null ) {
 				_loadmap.merge(b);
 				continue;
@@ -183,22 +183,22 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 		}
 	}
 
-	public void pubToRedis(List<EntityLoadBucket> buckets) {
+	public void pubToRedis(List<ServerLoadBucket> buckets) {
 		Jedis jedis = null;
 		try {
 			jedis = _pool.getResource();
 			Pipeline pipe = jedis.pipelined();
 
-			for(EntityLoadBucket bucket : buckets) {
+			for(ServerLoadBucket bucket : buckets) {
 				String[] reports = bucket.toReport(_gson,TopologyConstant.STD_DATETIME_FORMAT);
 				if( reports != null ) {
-					final String entity = reports[0];
+					final String server = reports[0];
 					final String json = reports[2];
 
 					if( json == null || json.isEmpty() ) {
 						return;
 					}
-					pipe.publish(_keyPrefix + entity,json);
+					pipe.publish(_keyPrefix + server,json);
 				}
 			}
 			pipe.sync();
@@ -207,7 +207,7 @@ public class EntityLoadState implements IBackingMap<EntityLoadBucket> {
 				jedis.close();
 			}
 		}
-		//log.info("Publish to " + _keyPrefix + entity + ": " + json);
+		//log.info("Publish to " + _keyPrefix + server + ": " + json);
 	}
 }
 

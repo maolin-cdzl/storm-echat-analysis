@@ -50,13 +50,13 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 			Pipeline pipe = jedis.pipelined();
 			for (List<OnlineEvent> l : _events.values() ) {
 				for(OnlineEvent ev : l) {
-					if( TopologyConstant.EVENT_LOGIN.equals(ev.event) ) {
+					if( EventConstant.EVENT_LOGIN.equals(ev.event) ) {
 						processLogin(state,pipe,collector,ev);
-					} else if( TopologyConstant.EVENT_RELOGIN.equals(ev.event) ) {
+					} else if( EventConstant.EVENT_RELOGIN.equals(ev.event) ) {
 						processRelogin(state,pipe,collector,ev);
-					} else if( TopologyConstant.EVENT_BROKEN.equals(ev.event) ) {
+					} else if( EventConstant.EVENT_BROKEN.equals(ev.event) ) {
 						processBroken(state,pipe,collector,ev);
-					} else if( TopologyConstant.EVENT_LOGOUT.equals(ev.event) ) {
+					} else if( EventConstant.EVENT_LOGOUT.equals(ev.event) ) {
 						processLogout(state,pipe,collector,ev);
 					} else {
 						log.error("Unknown event: " + ev.event);
@@ -102,7 +102,7 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 				if( lastLogoutJson != null ) {
 					OnlineEvent lastLogout = state.getGson().fromJson(lastLogoutJson,OnlineEvent.class);
 					if( lastLogout != null ) {
-						if( TopologyConstant.EVENT_BROKEN.equals(ev.event) ) {
+						if( EventConstant.EVENT_BROKEN.equals(ev.event) ) {
 							if( ev.date.after(lastLogout.date) ) {
 							   	long offtime = TimeUnit.MILLISECONDS.toSeconds(ev.date.getTime() - lastLogout.date.getTime());
 								if( offtime < 300 ) {
@@ -164,11 +164,11 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 
 	private void setUserOnline(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.STATE_SUFFIX,RedisConstant.STATE_ONLINE);
-		pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.ENTITY_SUFFIX,ev.entity);
+		pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.SERVER_SUFFIX,ev.server);
 		pipe.sadd(RedisConstant.ONLINE_USER_KEY,ev.uid);
 
-		pipe.sadd(RedisConstant.ENTITY_PREFIX + ev.entity + RedisConstant.USER_SUFFIX,ev.uid);
-		pipe.sadd(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.ENTITY_SET_SUFFIX,ev.entity);
+		pipe.sadd(RedisConstant.SERVER_PREFIX + ev.server + RedisConstant.USER_SUFFIX,ev.uid);
+		pipe.sadd(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.SERVER_SET_SUFFIX,ev.server);
 
 		if( ev.device != null ) {
 			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.DEVICE_SUFFIX,ev.device);
@@ -181,7 +181,7 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 	private void setUserOffline(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.STATE_SUFFIX,RedisConstant.STATE_OFFLINE);
 		pipe.srem(RedisConstant.ONLINE_USER_KEY,ev.uid);
-		pipe.srem(RedisConstant.ENTITY_PREFIX + ev.entity + RedisConstant.USER_SUFFIX,ev.uid);
+		pipe.srem(RedisConstant.SERVER_PREFIX + ev.server + RedisConstant.USER_SUFFIX,ev.uid);
 
 		String device = null;
 		String lastLoginJson = null;

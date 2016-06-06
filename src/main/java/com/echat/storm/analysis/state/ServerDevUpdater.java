@@ -18,19 +18,19 @@ import org.slf4j.LoggerFactory;
 
 import com.echat.storm.analysis.constant.*;
 
-public class EntityDevUpdater extends BaseStateUpdater<BaseState> {
+public class ServerDevUpdater extends BaseStateUpdater<BaseState> {
 	@Override
 	public void updateState(BaseState state, List<TridentTuple> inputs,TridentCollector collector) {
-		HashSet<String> entities = new HashSet<String>();
+		HashSet<String> servers = new HashSet<String>();
 		HashSet<String> devices = new HashSet<String>();
 
 		String e;
 		String d;
 
 		for(TridentTuple tuple : inputs) {
-			e = tuple.getStringByField(FieldConstant.ENTITY_FIELD);
+			e = tuple.getStringByField(FieldConstant.SERVER_FIELD);
 			if( e != null ) {
-				entities.add( e);
+				servers.add( e);
 			}
 			if( tuple.contains(FieldConstant.DEVICE_FIELD) ) {
 				d = tuple.getStringByField(FieldConstant.DEVICE_FIELD);
@@ -44,8 +44,8 @@ public class EntityDevUpdater extends BaseStateUpdater<BaseState> {
 		try {
 			jedis = state.getJedis();
 			Pipeline pipe = jedis.pipelined();
-			for(String entity : entities) {
-				pipe.sadd(RedisConstant.ENTITY_SET_KEY,entity);
+			for(String server: servers) {
+				pipe.sadd(RedisConstant.SERVER_SET_KEY,server);
 			}
 			for(String dev : devices) {
 				pipe.sadd(RedisConstant.DEVICE_SET_KEY,dev);

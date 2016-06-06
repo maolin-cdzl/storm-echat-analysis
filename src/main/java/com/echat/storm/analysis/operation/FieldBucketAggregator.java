@@ -24,31 +24,31 @@ import com.echat.storm.analysis.constant.*;
 import com.echat.storm.analysis.types.*;
 
 
-public class FieldBucketAggregator extends BaseAggregator<EntityLoadMap> {
+public class FieldBucketAggregator extends BaseAggregator<ServerLoadMap> {
 	private static final Logger log = LoggerFactory.getLogger(FieldBucketAggregator.class);
 
-	private final String _entityField;
+	private final String _serverField;
 	private final String _dateField;
 	private final String _evField;
 
-	public FieldBucketAggregator(final String entityField,final String dateField,final String evField) {
-		_entityField = entityField;
+	public FieldBucketAggregator(final String serverField,final String dateField,final String evField) {
+		_serverField = serverField;
 		_dateField = dateField;
 		_evField = evField;
 	}
 
 	@Override
-	public EntityLoadMap init(Object batchId, TridentCollector collector) {
-		return new EntityLoadMap();
+	public ServerLoadMap init(Object batchId, TridentCollector collector) {
+		return new ServerLoadMap();
 	}
 
 	@Override
-    public void aggregate(EntityLoadMap state, TridentTuple tuple, TridentCollector collector) {
-		final String entity = tuple.getStringByField(_entityField);
+    public void aggregate(ServerLoadMap state, TridentTuple tuple, TridentCollector collector) {
+		final String server = tuple.getStringByField(_serverField);
 		final String datetime = tuple.getStringByField(_dateField);
 		final String ev = tuple.getStringByField(_evField);
 
-		if( entity == null || datetime == null || ev == null ) {
+		if( server == null || datetime == null || ev == null ) {
 			return;
 		}
 
@@ -60,11 +60,11 @@ public class FieldBucketAggregator extends BaseAggregator<EntityLoadMap> {
 			return;
 		}
 
-		state.count(entity,DateUtils.truncate(date,Calendar.SECOND),ev);
+		state.count(server,DateUtils.truncate(date,Calendar.SECOND),ev);
 	}
 
 	@Override
-    public void complete(EntityLoadMap state, TridentCollector collector) {
+    public void complete(ServerLoadMap state, TridentCollector collector) {
 		Gson gson = new GsonBuilder().setDateFormat(TopologyConstant.STD_DATETIME_FORMAT).create();
 		List<String[]> reports = state.toReports(gson,TopologyConstant.STD_DATETIME_FORMAT);
 		if( reports == null ) {

@@ -21,24 +21,24 @@ import com.echat.storm.analysis.constant.*;
 import com.echat.storm.analysis.types.*;
 
 
-public class EntityLoadAggregator implements CombinerAggregator<EntityLoadBucket> {
-	private static final Logger log = LoggerFactory.getLogger(EntityLoadAggregator.class);
+public class ServerLoadAggregator implements CombinerAggregator<ServerLoadBucket> {
+	private static final Logger log = LoggerFactory.getLogger(ServerLoadAggregator.class);
 
 	private Gson _gson;
 
 	@Override
-	public EntityLoadBucket init(TridentTuple tuple) {
-		return EntityLoadBucket.fromJson(getGson(),tuple.getString(0));
+	public ServerLoadBucket init(TridentTuple tuple) {
+		return ServerLoadBucket.fromJson(getGson(),tuple.getString(0));
 	}
 
 	@Override
-	public EntityLoadBucket combine(EntityLoadBucket v1,EntityLoadBucket v2) {
-		return EntityLoadBucket.merge(v1,v2);
+	public ServerLoadBucket combine(ServerLoadBucket v1,ServerLoadBucket v2) {
+		return ServerLoadBucket.merge(v1,v2);
 	}
 
 	@Override
-	public EntityLoadBucket zero() {
-		return new EntityLoadBucket();
+	public ServerLoadBucket zero() {
+		return new ServerLoadBucket();
 	}
 
 	private Gson getGson() {

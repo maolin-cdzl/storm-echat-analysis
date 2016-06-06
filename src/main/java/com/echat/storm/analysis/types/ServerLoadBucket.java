@@ -8,23 +8,23 @@ import java.util.HashMap;
 import org.apache.commons.lang.time.DateFormatUtils;
 import com.google.gson.Gson;
 
-public class EntityLoadBucket implements Serializable {
-	public String						entity;
+public class ServerLoadBucket implements Serializable {
+	public String						server;
 	public Date							time;
 	public HashMap<String,Long>			events;
 
-	public EntityLoadBucket() {
+	public ServerLoadBucket() {
 		events = new HashMap<String,Long>();
 	}
-	public EntityLoadBucket(final String e,final Date t) {
-		entity = e;
+	public ServerLoadBucket(final String e,final Date t) {
+		server = e;
 		time = t;
 		events = new HashMap<String,Long>();
 	}
 
 	public void count(final String ev) {
-		if( entity == null ) {
-			throw new RuntimeException("EntityLoadBucket Can not count before init");
+		if( server == null ) {
+			throw new RuntimeException("ServerLoadBucket Can not count before init");
 		}
 		Long c = events.get(ev);
 		if( c == null ) {
@@ -39,15 +39,15 @@ public class EntityLoadBucket implements Serializable {
 		return events.size();
 	}
 
-	public EntityLoadBucket merge(EntityLoadBucket other) {
-		if( entity == null ) {
+	public ServerLoadBucket merge(ServerLoadBucket other) {
+		if( server == null ) {
 			return other;
 		}
-		if( other.entity == null ) {
+		if( other.server == null ) {
 			return this;
 		}
-		if( ! entity.equals(other.entity) ) {
-			throw new RuntimeException("Can not merge to different entity!");
+		if( ! server.equals(other.server) ) {
+			throw new RuntimeException("Can not merge to different server!");
 		}
 
 		for(Map.Entry<String,Long> entry : other.events.entrySet()) {
@@ -67,17 +67,17 @@ public class EntityLoadBucket implements Serializable {
 			return null;
 		}
 		String[] report = new String[3];
-		report[0] = entity;
+		report[0] = server;
 		report[1] = DateFormatUtils.format(time,dateFormat);
 		report[2] = gson.toJson(this);
 		return report;
 	}
 
-	static public EntityLoadBucket fromJson(Gson gson,String str) {
-		return gson.fromJson(str,EntityLoadBucket.class);
+	static public ServerLoadBucket fromJson(Gson gson,String str) {
+		return gson.fromJson(str,ServerLoadBucket.class);
 	}
 
-	static public EntityLoadBucket merge(EntityLoadBucket b1,EntityLoadBucket b2) {
+	static public ServerLoadBucket merge(ServerLoadBucket b1,ServerLoadBucket b2) {
 		if( b1.size() >= b2.size() ) {
 			return b1.merge(b2);
 		} else {

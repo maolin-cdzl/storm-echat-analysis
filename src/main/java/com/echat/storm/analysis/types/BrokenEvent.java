@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 public class BrokenEvent {
 	private static final Logger log = LoggerFactory.getLogger(BrokenEvent.class);
 
-	public String			entity;
+	public String			server;
 	public String			uid;
 	public Date				date;
 	public Long				offtime;
@@ -20,7 +20,7 @@ public class BrokenEvent {
 
 	static public BrokenEvent create(OnlineEvent login,long offtime) {
 		BrokenEvent broken = new BrokenEvent();
-		broken.entity = login.entity;
+		broken.server = login.server;
 		broken.date = login.date;
 		broken.offtime = offtime;
 		broken.uid = login.uid;

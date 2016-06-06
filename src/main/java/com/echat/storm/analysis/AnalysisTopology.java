@@ -55,214 +55,39 @@ public class AnalysisTopology {
 		spoutConf.startOffsetTime = kafka.api.OffsetRequest.LatestTime(); 
 		//spoutConf.ignoreZkOffsets = true;
 
-		Stream logStream = topology.newStream(TopologyConstant.SPOUT_INPUT,new OpaqueTridentKafkaSpout(spoutConf)).partitionBy(new Fields(FieldConstant.ENTITY_FIELD)).parallelismHint(TopologyConstant.SPORT_INPUT_EXECUTORS); 
+		Stream logStream = topology.newStream(TopologyConstant.SPOUT_INPUT,new OpaqueTridentKafkaSpout(spoutConf)).partitionBy(new Fields(FieldConstant.SERVER_FIELD)).parallelismHint(TopologyConstant.SPORT_INPUT_EXECUTORS); 
 
-		Stream fatalStream = logStream.each(new Fields(FieldConstant.LEVEL_FIELD),new LevelFilter("FATAL")).name(TopologyConstant.STREAM_FATAL);
-		Stream errorStream = logStream.each(new Fields(FieldConstant.LEVEL_FIELD),new LevelFilter("ERROR")).name(TopologyConstant.STREAM_ERROR);
-		Stream warnStream = logStream.each(new Fields(FieldConstant.LEVEL_FIELD),new LevelFilter("WARNING")).name(TopologyConstant.STREAM_WARN);
-		Stream infoStream = logStream.each(new Fields(FieldConstant.LEVEL_FIELD),new LevelFilter("INFO")).name(TopologyConstant.STREAM_INFO);
-
-		// event streams
-		Stream eventStream = infoStream.each(new Fields(FieldConstant.CONTENT_FIELD),new GetEvent(),new Fields(FieldConstant.EVENT_FIELD));
-
-		Stream onlineStream = eventStream.each(
-				new Fields(FieldConstant.EVENT_FIELD),
-				new EventFilter(new String[]{
-					TopologyConstant.EVENT_LOGIN,
-					TopologyConstant.EVENT_RELOGIN,
-					TopologyConstant.EVENT_BROKEN,
-					TopologyConstant.EVENT_LOGOUT}))
-			.each(
-				new Fields(FieldConstant.EVENT_FIELD,FieldConstant.CONTENT_FIELD),
-				new ParseOnlineEvents(),
-				new Fields(
-					FieldConstant.UID_FIELD,
-					FieldConstant.CTX_FIELD,
-					FieldConstant.IP_FIELD,
-					FieldConstant.DEVICE_FIELD,
-					FieldConstant.DEVICE_ID_FIELD,
-					FieldConstant.VERSION_FIELD,
-					FieldConstant.IMSI_FIELD,
-					FieldConstant.EXPECT_PAYLOAD_FIELD,
-					FieldConstant.COMPANY_FIELD,
-					FieldConstant.AGENT_FIELD,
-					))
-			.name(TopologyConstant.STREAM_EVENT_GROUP_ONLINE);
-
-		GroupedStream loginFailedStream = eventStream.each(
-				new Fields(FieldConstant.EVENT_FIELD),
-				new EventFilter(TopologyConstant.EVENT_LOGIN_FAILED))
-			.each(
-				new Fields(FieldConstant.EVENT_FIELD,FieldConstant.CONTENT_FIELD),
-				new ParseLoginFailedEvents(),
-				new Fields(
-					FieldConstant.REASON_FIELD,
-					FieldConstant.UID_FIELD,
-					FieldConstant.CTX_FIELD,
-					FieldConstant.IP_FIELD,
-					FieldConstant.DEVICE_FIELD,
-					FieldConstant.DEVICE_ID_FIELD,
-					FieldConstant.VERSION_FIELD,
-					FieldConstant.IMSI_FIELD,
-					FieldConstant.EXPECT_PAYLOAD_FIELD))
-			.groupBy(new Fields(FieldConstant.UID_FIELD))
-			.name(TopologyConstant.STREAM_EVENT_GROUP_LOGIN_FAILED);
-			
-		GroupedStream speakStream = eventStream.each(
-				new Fields(FieldConstant.EVENT_FIELD),
-				new EventFilter(new String[]{
-					TopologyConstant.EVENT_GET_MIC,
-					TopologyConstant.EVENT_DENT_MIC,
-					TopologyConstant.EVENT_RELEASE_MIC,
-					TopologyConstant.EVENT_LOSTMIC_AUTO,
-					TopologyConstant.EVENT_LOSTMIC_REPLACE}))
-			.each(
-				new Fields(FieldConstant.EVENT_FIELD,FieldConstant.CONTENT_FIELD),
-				new ParseSpeakEvents(),
-				new Fields(
-					FieldConstant.UID_FIELD,
-					FieldConstant.GID_FIELD,
-					FieldConstant.TARGET_FIELD))
-			.parallelismHint(2)
-			.groupBy(new Fields(FieldConstant.GID_FIELD))
-			.name(TopologyConstant.STREAM_EVENT_GROUP_SPEAK);
-
-		GroupedStream groupStream = eventStream.each(
-				new Fields(FieldConstant.EVENT_FIELD),
-				new EventFilter(new String[]{
-					TopologyConstant.EVENT_JOIN_GROUP,
-					TopologyConstant.EVENT_LEAVE_GROUP}))
-			.each(
-				new Fields(FieldConstant.EVENT_FIELD,FieldConstant.CONTENT_FIELD),
-				new ParseGroupEvents(),
-				new Fields(
-					FieldConstant.UID_FIELD,
-					FieldConstant.GID_FIELD))
-			.groupBy(new Fields(FieldConstant.GID_FIELD))
-			.name(TopologyConstant.STREAM_EVENT_GROUP_GROUP);
-
-		GroupedStream callStream = eventStream.each(
-				new Fields(FieldConstant.EVENT_FIELD),
-				new EventFilter(new String[]{
-					TopologyConstant.EVENT_CALL,
-					TopologyConstant.EVENT_QUICKDIAL}))
-			.each(
-				new Fields(FieldConstant.EVENT_FIELD,FieldConstant.CONTENT_FIELD),
-				new ParseCallEvents(),
-				new Fields(
-					FieldConstant.UID_FIELD,
-					FieldConstant.TARGET_FIELD,
-					FieldConstant.TARGET_GOT_FIELD))
-			.groupBy(new Fields(FieldConstant.UID_FIELD))
-			.name(TopologyConstant.STREAM_EVENT_GROUP_CALL);
-
-
-		GroupedStream queryStream = eventStream.each(
-				new Fields(FieldConstant.EVENT_FIELD),
-				new EventFilter(new String[]{
-					TopologyConstant.EVENT_QUERY_USER,
-					TopologyConstant.EVENT_QUERY_GROUP,
-					TopologyConstant.EVENT_QUERY_CONTACT,
-					TopologyConstant.EVENT_QUERY_MEMBERS,
-					TopologyConstant.EVENT_QUERY_DEPARTMENT,
-					TopologyConstant.EVENT_QUERY_ENTERPISE_GROUP}))
-			.each(
-				new Fields(FieldConstant.EVENT_FIELD,FieldConstant.CONTENT_FIELD),
-				new ParseQueryEvents(),
-				new Fields(
-					FieldConstant.UID_FIELD,
-					FieldConstant.COUNT_FIELD,
-					FieldConstant.TARGET_FIELD))
-			.groupBy(new Fields(FieldConstant.UID_FIELD))
-			.name(TopologyConstant.STREAM_EVENT_GROUP_QUERY);
-
-		GroupedStream profileStream = eventStream.each(
-				new Fields(FieldConstant.EVENT_FIELD),
-				new EventFilter( new String[]{
-					TopologyConstant.EVENT_CHANGE_NAME,
-					TopologyConstant.EVENT_CHANGE_PWD,
-					TopologyConstant.EVENT_CHANGE_PWD_FAILED,
-					TopologyConstant.EVENT_CONTACT_REQ,
-					TopologyConstant.EVENT_CONTACT_REP,
-					TopologyConstant.EVENT_CONTACT_RM}))
-			.each(
-				new Fields(FieldConstant.EVENT_FIELD,FieldConstant.CONTENT_FIELD),
-				new ParseProfileEvents(),
-				new Fields(
-					FieldConstant.UID_FIELD,
-					FieldConstant.TARGET_FIELD,
-					FieldConstant.TARGET_GOT_FIELD,
-					FieldConstant.TARGET_DENT_FIELD))
-			.groupBy(new Fields(FieldConstant.UID_FIELD))
-			.name(TopologyConstant.STREAM_EVENT_GROUP_PROFILE);
-
-		GroupedStream manageStream = eventStream.each(
-				new Fields(FieldConstant.EVENT_FIELD),
-				new EventFilter( new String[]{
-					TopologyConstant.EVENT_DISPATCH,
-					TopologyConstant.EVENT_SW_GPS,
-					TopologyConstant.EVENT_SW_AUDIO,
-					TopologyConstant.EVENT_TAKE_MIC,
-					TopologyConstant.EVENT_CREATE_GROUP,
-					TopologyConstant.EVENT_RM_GROUP,
-					TopologyConstant.EVENT_EMPOWER,
-					TopologyConstant.EVENT_EMPOWER_FAILED,
-					TopologyConstant.EVENT_DEPRIVE,
-					TopologyConstant.EVENT_DEPRIVE_FAILED,
-					TopologyConstant.EVENT_CHANGE_GROUP_NAME,
-					TopologyConstant.EVENT_CHANGE_GROUP_NAME_FAILED}))
-			.each(
-				new Fields(FieldConstant.EVENT_FIELD,FieldConstant.CONTENT_FIELD),
-				new ParseManageEvents(),
-				new Fields(
-					FieldConstant.UID_FIELD,
-					FieldConstant.TARGET_FIELD,
-					FieldConstant.TARGET_GOT_FIELD,
-					FieldConstant.TARGET_DENT_FIELD,
-					FieldConstant.SW_FIELD,
-					FieldConstant.VALUE_FIELD))
-			.groupBy(new Fields(FieldConstant.UID_FIELD))
-			.name(TopologyConstant.STREAM_EVENT_GROUP_MANAGE);
-
-
-		GroupedStream worksheetStream = eventStream.each(
-				new Fields(FieldConstant.EVENT_FIELD),
-				new EventFilter(TopologyConstant.EVENT_WORKSHEET_POST))
-			.each(
-				new Fields(FieldConstant.EVENT_FIELD,FieldConstant.CONTENT_FIELD),
-				new ParseWorkSheetEvents(),
-				new Fields(
-					FieldConstant.UID_FIELD,
-					FieldConstant.TARGET_FIELD,
-					FieldConstant.COUNT_FIELD))
-			.groupBy(new Fields(FieldConstant.UID_FIELD))
-			.name(TopologyConstant.STREAM_EVENT_GROUP_WORKSHEET);
-
+		logStream.partitionPersist(
+				new HBaseStateFactory(new HBaseState.Options().withTableName(HBaseConstant.HBASE_LOG_TABLE).withMapper()),
+				PttSvcLog.newFields(),
+				new HBaseUpdater()
+				);
+		/*
 		// log level count
 		Stream loadStream = topology.merge(
 			logStream.partitionAggregate(
-				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.LEVEL_FIELD),
-				new FieldBucketAggregator(FieldConstant.ENTITY_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.LEVEL_FIELD),
-				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.BUCKET_FIELD,FieldConstant.LOAD_FIELD)),
+				new Fields(FieldConstant.SERVER_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.LEVEL_FIELD),
+				new FieldBucketAggregator(FieldConstant.SERVER_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.LEVEL_FIELD),
+				new Fields(FieldConstant.SERVER_FIELD,FieldConstant.BUCKET_FIELD,FieldConstant.LOAD_FIELD)),
 			eventStream.partitionAggregate(
-				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.EVENT_FIELD),
-				new FieldBucketAggregator(FieldConstant.ENTITY_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.EVENT_FIELD),
-				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.BUCKET_FIELD,FieldConstant.LOAD_FIELD))
+				new Fields(FieldConstant.SERVER_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.EVENT_FIELD),
+				new FieldBucketAggregator(FieldConstant.SERVER_FIELD,FieldConstant.DATETIME_FIELD,FieldConstant.EVENT_FIELD),
+				new Fields(FieldConstant.SERVER_FIELD,FieldConstant.BUCKET_FIELD,FieldConstant.LOAD_FIELD))
 		);
 
 
 		//log.info("loadStream fields: " + Arrays.toString(loadStream.getOutputFields().toList().toArray()));
-		TridentState loadState = loadStream.groupBy(new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.BUCKET_FIELD)).persistentAggregate(
-				EntityLoadState.nonTransactional(TopologyConstant.REDIS_CONFIG),
+		TridentState loadState = loadStream.groupBy(new Fields(FieldConstant.SERVER_FIELD,FieldConstant.BUCKET_FIELD)).persistentAggregate(
+				ServerLoadState.nonTransactional(TopologyConstant.REDIS_CONFIG),
 				new Fields(FieldConstant.LOAD_FIELD),
-				new EntityLoadAggregator(),
-				new Fields(FieldConstant.ENTITY_LOAD_FIELD)
+				new ServerLoadAggregator(),
+				new Fields(FieldConstant.SERVER_LOAD_FIELD)
 				);
 
 		onlineStream.partitionPersist(
 				new BaseState.Factory(TopologyConstant.REDIS_CONFIG),
-				new Fields(FieldConstant.ENTITY_FIELD,FieldConstant.DEVICE_FIELD),
-				new EntityDevUpdater(),
+				new Fields(FieldConstant.SERVER_FIELD,FieldConstant.DEVICE_FIELD),
+				new ServerDevUpdater(),
 				new Fields()
 				);
 
@@ -272,7 +97,7 @@ public class AnalysisTopology {
 				new OnlineUpdater(),
 				new Fields(FieldConstant.BROKEN_EVENT_FIELD)
 				);
-
+		*/
 		return topology.build();
 	}
 

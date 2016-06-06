@@ -18,7 +18,7 @@ import com.echat.storm.analysis.constant.*;
 public class OnlineEvent {
 	private static final Logger log = LoggerFactory.getLogger(OnlineEvent.class);
 
-	public String entity;
+	public String server;
 	public Long ts;
 	public Date date;
 	public String event;
@@ -52,14 +52,6 @@ public class OnlineEvent {
 	}
 
 	static public OnlineEvent fromTuple(TridentTuple tuple) {
-		if( !tuple.contains(FieldConstant.ENTITY_FIELD) || 
-			!tuple.contains(FieldConstant.TIMESTAMP_FIELD) ||
-			!tuple.contains(FieldConstant.DATETIME_FIELD) ||
-			!tuple.contains(FieldConstant.EVENT_FIELD) ||
-			!tuple.contains(FieldConstant.UID_FIELD) ) {
-				log.error("missing fields: " + Arrays.toString(tuple.getFields().toList().toArray()));
-				return null;
-		}
 		OnlineEvent ev = new OnlineEvent();
 
 		try {
@@ -68,7 +60,7 @@ public class OnlineEvent {
 			log.error("Bad datetime format: " + tuple.getStringByField(FieldConstant.DATETIME_FIELD));
 			return null;
 		}
-		ev.entity = tuple.getStringByField(FieldConstant.ENTITY_FIELD);
+		ev.server = tuple.getStringByField(FieldConstant.SERVER_FIELD);
 		ev.ts = tuple.getLongByField(FieldConstant.TIMESTAMP_FIELD);
 		ev.event = tuple.getStringByField(FieldConstant.EVENT_FIELD);
 		ev.uid = tuple.getStringByField(FieldConstant.UID_FIELD);

@@ -8,40 +8,40 @@ import java.io.Serializable;
 import com.google.gson.Gson;
 
 
-public class EntityLoadList implements Serializable {
-	public String							entity;
-	public LinkedList<EntityLoadBucket>		loads;
+public class ServerLoadList implements Serializable {
+	public String							server;
+	public LinkedList<ServerLoadBucket>		loads;
 	public Date								timeLine;
 
-	public EntityLoadList() {
-		this.loads = new LinkedList<EntityLoadBucket>();
+	public ServerLoadList() {
+		this.loads = new LinkedList<ServerLoadBucket>();
 	}
 
-	public EntityLoadList(final String entity) {
-		this.entity = entity;
-		this.loads = new LinkedList<EntityLoadBucket>();
+	public ServerLoadList(final String server) {
+		this.server = server;
+		this.loads = new LinkedList<ServerLoadBucket>();
 	}
 
 
 	public void count(final String e,final Date time,final String ev) {
-		if( entity == null ) {
-			entity = e;
-		} else if( ! entity.equals(e) ) {
-			throw new RuntimeException("Can not count event for different entity!");
+		if( server == null ) {
+			server = e;
+		} else if( ! server.equals(e) ) {
+			throw new RuntimeException("Can not count event for different server!");
 		}
 
 		count(time,ev);
 	}
 
 	public void count(final Date time,final String ev) {
-		for(EntityLoadBucket b : loads) {
+		for(ServerLoadBucket b : loads) {
 			if( b.time.equals(time) ) {
 				b.count(ev);
 				return;
 			}
 		}
 	
-		EntityLoadBucket b = new EntityLoadBucket(entity,time);
+		ServerLoadBucket b = new ServerLoadBucket(server,time);
 		b.count(ev);
 
 		loads.add(getInsertPos(time),b);
@@ -49,18 +49,18 @@ public class EntityLoadList implements Serializable {
 
 	public int size() {
 		int s = 0;
-		for(EntityLoadBucket b : loads) {
+		for(ServerLoadBucket b : loads) {
 			s += b.size();
 		}
 		return s;
 	}
 
-	public EntityLoadList merge(EntityLoadBucket bucket) {
-		if( !entity.equals(bucket.entity) ) {
-			throw new RuntimeException("Can not merge different entity!");
+	public ServerLoadList merge(ServerLoadBucket bucket) {
+		if( !server.equals(bucket.server) ) {
+			throw new RuntimeException("Can not merge different server!");
 		}
 
-		for(EntityLoadBucket e : loads) {
+		for(ServerLoadBucket e : loads) {
 			if( e.time.equals(bucket.time) ) {
 				e.merge(bucket);
 				return this;
@@ -71,17 +71,17 @@ public class EntityLoadList implements Serializable {
 		return this;
 	}
 
-	public EntityLoadList merge(EntityLoadList list) {
-		if( ! entity.equals(list.entity) ) {
-			throw new RuntimeException("Can not merge different entity list!");
+	public ServerLoadList merge(ServerLoadList list) {
+		if( ! server.equals(list.server) ) {
+			throw new RuntimeException("Can not merge different server list!");
 		}
-		for(EntityLoadBucket b : list.loads) {
+		for(ServerLoadBucket b : list.loads) {
 			merge(b);
 		}
 		return this;
 	}
 
-	static public EntityLoadList merge(EntityLoadList l1,EntityLoadList l2) {
+	static public ServerLoadList merge(ServerLoadList l1,ServerLoadList l2) {
 		if( l1.size() >= l2.size() ) {
 			return l1.merge(l2);
 		} else {
@@ -96,7 +96,7 @@ public class EntityLoadList implements Serializable {
 
 		LinkedList<String[]> reports = new LinkedList<String[]>();
 
-		for(EntityLoadBucket b : loads) {
+		for(ServerLoadBucket b : loads) {
 			if( b.size() == 0 ) {
 				continue;
 			}
@@ -112,8 +112,8 @@ public class EntityLoadList implements Serializable {
 		}
 	}
 
-	public EntityLoadBucket find(Date time) {
-		for(EntityLoadBucket b : loads) {
+	public ServerLoadBucket find(Date time) {
+		for(ServerLoadBucket b : loads) {
 			if( b.time.equals(time) ) {
 				return b;
 			}
@@ -121,7 +121,7 @@ public class EntityLoadList implements Serializable {
 		return null;
 	}
 
-	public EntityLoadBucket getEarliest() {
+	public ServerLoadBucket getEarliest() {
 		if( ! loads.isEmpty() ) {
 			return loads.get(0);
 		} else {
@@ -129,7 +129,7 @@ public class EntityLoadList implements Serializable {
 		}
 	}
 
-	public EntityLoadBucket getLatest() {
+	public ServerLoadBucket getLatest() {
 		if( ! loads.isEmpty() ) {
 			return loads.get(loads.size() - 1);
 		} else {
@@ -160,11 +160,11 @@ public class EntityLoadList implements Serializable {
 		return (int)((loads.get(loads.size() -1).time.getTime() - loads.get(0).time.getTime()) / 1000);
 	}
 
-	public EntityLoadBucket popEarliest() {
+	public ServerLoadBucket popEarliest() {
 		if( loads.isEmpty() ) {
 			return null;
 		}
-		EntityLoadBucket b = loads.get(0);
+		ServerLoadBucket b = loads.get(0);
 		loads.remove(0);
 		timeLine = b.time;
 		return b;
