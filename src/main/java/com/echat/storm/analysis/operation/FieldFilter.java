@@ -5,16 +5,21 @@ import storm.trident.operation.BaseFilter;
 
 import com.echat.storm.analysis.constant.FieldConstant;
 
-public class LevelFilter extends BaseFilter {
-	private final String level;
+public class FieldFilter extends BaseFilter {
+	private final String field;
 
-	public LevelFilter(String level) {
-		this.level = level;
+	public FieldFilter(final String field) {
+		this.field = field;
 	}
+
 
 	@Override
 	public boolean isKeep(TridentTuple tuple) {
-		return level.equals(tuple.getStringByField(FieldConstant.LEVEL_FIELD));
+		if( tuple.contains(field) ) {
+			return (null != tuple.getValueByField(field));
+		} else {
+			return false;
+		}
 	}
 }
 

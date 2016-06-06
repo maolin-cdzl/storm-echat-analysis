@@ -57,7 +57,7 @@ public class EventConstant {
 	public static final String EVENT_CHANGE_GROUP_NAME_FAILED = "CH_GROUP_NAME_FAILED";
 	
 	// worksheet
-	public static final String EVENT_WORKSHEET_POST = "POST";
+	public static final String EVENT_WORKSHEET_POST = "WORKSHEET_POST";
 
 }
 

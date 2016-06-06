@@ -2,17 +2,15 @@ package com.echat.storm.analysis.types;
 
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
-import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.ITuple;
 import com.echat.storm.analysis.constant.FieldConstant;
 
-public class PttSvcLog {
+public class PttUserActionLog {
 	static public Fields newFields() {
 		return new Fields(
 				FieldConstant.SERVER_FIELD,
 				FieldConstant.DATETIME_FIELD,
 				FieldConstant.TIMESTAMP_FIELD,
-				FieldConstant.LEVEL_FIELD,
-				FieldConstant.CONTENT_FIELD,
 				FieldConstant.EVENT_FIELD,
 				FieldConstant.UID_FIELD,
 				FieldConstant.GID_FIELD,
@@ -35,13 +33,11 @@ public class PttSvcLog {
 					);
 	}
 	
-	static public PttSvcLog fromTuple(Tuple tuple) {
-		PttSvcLog log = new PttSvcLog();
+	static public PttUserActionLog fromTuple(ITuple tuple) {
+		PttUserActionLog log = new PttUserActionLog();
 		log.server = tuple.getStringByField(FieldConstant.SERVER_FIELD);
 		log.datetime = tuple.getStringByField(FieldConstant.DATETIME_FIELD);
 		log.timestamp = tuple.getLongByField(FieldConstant.TIMESTAMP_FIELD);
-		log.level = tuple.getStringByField(FieldConstant.LEVEL_FIELD);
-		log.content = tuple.getStringByField(FieldConstant.CONTENT_FIELD);
 		log.event = tuple.getStringByField(FieldConstant.EVENT_FIELD);
 		log.uid = tuple.getStringByField(FieldConstant.UID_FIELD);
 		log.gid = tuple.getStringByField(FieldConstant.GID_FIELD);
@@ -67,8 +63,6 @@ public class PttSvcLog {
 	public String server;
 	public String datetime;
 	public Long	  timestamp;
-	public String level;
-	public String content;
 	public String event;
 	public String uid;
 	public String gid;
@@ -93,8 +87,6 @@ public class PttSvcLog {
 		return new Values(
 			server,
 			datetime,
-			level,
-			content,
 			event,
 			uid,
 			gid,

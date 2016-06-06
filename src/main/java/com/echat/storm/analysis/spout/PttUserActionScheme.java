@@ -25,17 +25,17 @@ import java.io.UnsupportedEncodingException;
 import com.echat.storm.analysis.constant.FieldConstant;
 import com.echat.storm.analysis.constant.EventConstant;
 import com.echat.storm.analysis.constant.TopologyConstant;
-import com.echat.storm.analysis.types.PttSvcLog;
+import com.echat.storm.analysis.types.PttUserActionLog;
 import com.echat.storm.analysis.utils.GetKeyValues;
 import com.echat.storm.analysis.utils.UserOrgInfoReader;
 import com.echat.storm.analysis.utils.UserOrgInfoReader.OrganizationInfo;
 
 
-public class PttsvcLogInfoScheme implements Scheme {
-	private static final Logger logger = LoggerFactory.getLogger(PttsvcLogInfoScheme.class);
+public class PttUserActionScheme implements Scheme {
+	private static final Logger logger = LoggerFactory.getLogger(PttUserActionScheme.class);
 
 	private interface EventParser extends Serializable {
-		boolean parse(PttSvcLog log,Map<String,String> keys);
+		boolean parse(PttUserActionLog log,Map<String,String> keys);
 	}
 
 	private static final String BASE_PATTERN = "^(\\w+)\\s+(\\d{4}[/:\\.\\-\\\\]\\d{2}[/:\\.\\-\\\\]\\d{2}\\s\\d{2}:\\d{2}:\\d{2})\\.(\\d+)\\s(\\w+)[^\"]*\"([^\"]+)\"";
@@ -89,7 +89,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 	private GetKeyValues reg = null;
 	private UserOrgInfoReader orgReader = null;
 
-	public PttsvcLogInfoScheme() {
+	public PttUserActionScheme() {
 		PatternCompiler compiler = new Perl5Compiler();
 		try {
 			this.basePattern = compiler.compile(BASE_PATTERN);
@@ -102,7 +102,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 
 	@Override
 	public Fields getOutputFields() {
-		return PttSvcLog.newFields();
+		return PttUserActionLog.newFields();
 	}
 
 	@Override
@@ -115,30 +115,26 @@ public class PttsvcLogInfoScheme implements Scheme {
 			return null;
 		}
 
-		PttSvcLog log = new PttSvcLog();
-		if( ! baseParse(log,line) ) {
-			return null;
-		}
-		if( log.event != null ) {
+		PttUserActionLog log = new PttUserActionLog();
+		String content = baseParse(log,line);
+		if( content != null ) {			// promise event != null
 			EventParser p = EVENT_PARSER_MAP.get(log.event);
 			if( p != null ) {
-				Map<String,String> keys = reg.getKeys(log.content);
-				if( ! p.parse(log,keys) ) {
-					return null;
-				}
-				if( log.uid != null ) {
+				Map<String,String> keys = reg.getKeys(content);
+				if( p.parse(log,keys) ) {		// promise uid != null
 					OrganizationInfo org = orgReader.search(log.uid);
 					if( org != null ) {
 						log.company = org.company;
 						log.agent = org.agent;
 					}
+					return log.toValues();
 				}
 			}
 		}
-		return log.toValues();
+		return null;
 	}
 
-	private boolean baseParse(PttSvcLog log,String line) {
+	private String baseParse(PttUserActionLog log,String line) {
 		if( pm.contains(line,basePattern) ) {
 			MatchResult mr = pm.getMatch();
 			log.server = mr.group(1);
@@ -146,37 +142,34 @@ public class PttsvcLogInfoScheme implements Scheme {
 			try {
 				log.timestamp = Long.parseLong(mr.group(3)) / 100L;
 			} catch( NumberFormatException e ) {
-				
-				return false;
+				return null;
 			}
-			log.level = mr.group(4);
-			log.content = mr.group(5);
+			String level = mr.group(4);
+			String content = mr.group(5);
 
-			//logger.debug("Kafka tuple: " + entity + "\t" + datetime + "\t" + level + "\t" + content);
-			
-			if( log.level.equals("INFO") ) {
+			if( level.equals("INFO") ) {
 				for(int i=0; i < LOG_PREFIX_TO_EVENT.length; i++) {
-					if( log.content.startsWith(LOG_PREFIX_TO_EVENT[i][0]) ) {
+					if( content.startsWith(LOG_PREFIX_TO_EVENT[i][0]) ) {
 						// split CONFIG event to audio/location sw event
 						if( LOG_PREFIX_TO_EVENT[i][1].equals(EventConstant.EVENT_CONFIG) ) {
-							if( log.content.contains("audio") ) {
+							if( content.contains("audio") ) {
 								log.event = EventConstant.EVENT_SW_AUDIO;
-								return true;
-							} else if( log.content.contains("location") ) {
+							} else if( content.contains("location") ) {
 								log.event = EventConstant.EVENT_SW_GPS;
-								return true;
 							}
 						} else {
 							log.event = LOG_PREFIX_TO_EVENT[i][1];
-							return true;
 						}
+						break;
 					}
 				}
-			} else {
-				return true;
+				
+				if( log.event != null ) {
+					return content;
+				}
 			}
 		}
-		return false;
+		return null;
 	}
 
 	static private HashMap<String,EventParser> createEventParserMap() {
@@ -184,7 +177,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 
 		EventParser loginParser = new EventParser() {
 			@Override
-			public boolean parse(PttSvcLog log,Map<String,String> keys) {
+			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				if( log.uid == null ) {
 					return false;
@@ -212,7 +205,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 
 		EventParser logoutParser = new EventParser() {
 			@Override
-			public boolean parse(PttSvcLog log,Map<String,String> keys) {
+			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.ip = keys.get("address");
 				return ( log.uid != null );
@@ -223,7 +216,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 
 		EventParser speakParser = new EventParser() {
 			@Override
-			public boolean parse(PttSvcLog log,Map<String,String> keys) {
+			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.gid = keys.get("gid");
 				log.target = keys.get("target");
@@ -239,7 +232,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 		
 		EventParser groupParser = new EventParser() {
 			@Override
-			public boolean parse(PttSvcLog log,Map<String,String> keys) {
+			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.gid = keys.get("gid");
 				return ( log.uid != null && log.gid != null );
@@ -250,7 +243,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 
 		EventParser callParser = new EventParser() {
 			@Override
-			public boolean parse(PttSvcLog log,Map<String,String> keys) {
+			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.target = keys.get("targets");
 				log.target_got = keys.get("called");
@@ -263,7 +256,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 
 		EventParser queryParser = new EventParser() {
 			@Override
-			public boolean parse(PttSvcLog log,Map<String,String> keys) {
+			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.count = keys.get("count");
 				log.target = keys.get("gids");
@@ -283,7 +276,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 
 		EventParser profileParser = new EventParser() {
 			@Override
-			public boolean parse(PttSvcLog log,Map<String,String> keys) {
+			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				if( EventConstant.EVENT_CHANGE_NAME.equals(log.event) ) {
 					log.target_got = keys.get("name");
@@ -317,7 +310,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 
 		EventParser manageParser = new EventParser() {
 			@Override
-			public boolean parse(PttSvcLog log,Map<String,String> keys) {
+			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 
 				if( EventConstant.EVENT_DISPATCH.equals(log.event) ) {
@@ -385,7 +378,7 @@ public class PttsvcLogInfoScheme implements Scheme {
 		
 		EventParser worksheetParser = new EventParser() {
 			@Override
-			public boolean parse(PttSvcLog log,Map<String,String> keys) {
+			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.target = keys.get("target");
 				log.count = keys.get("msgcount");

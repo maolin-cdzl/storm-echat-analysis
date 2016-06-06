@@ -1,13 +1,13 @@
 package com.echat.storm.analysis.constant;
 
 public class HBaseConstant {
-	public static final String LOG_TABLE = "pttsvclog";
+	public static final String USER_ACTION_TABLE = "user_action";
 	public static final byte[] COLUMN_FAMILY_LOG = "l".getBytes();
 	public static final byte[] COLUMN_SERVER = FieldConstant.SERVER_FIELD.getBytes();
 	public static final byte[] COLUMN_DATETIME = FieldConstant.DATETIME_FIELD.getBytes();
 	public static final byte[] COLUMN_TIMESTAMP = FieldConstant.TIMESTAMP_FIELD.getBytes();
-	public static final byte[] COLUMN_LEVEL = FieldConstant.LEVEL_FIELD.getBytes();
-	public static final byte[] COLUMN_CONTENT = FieldConstant.CONTENT_FIELD.getBytes();
+	//public static final byte[] COLUMN_LEVEL = FieldConstant.LEVEL_FIELD.getBytes();
+	//public static final byte[] COLUMN_CONTENT = FieldConstant.CONTENT_FIELD.getBytes();
 	public static final byte[] COLUMN_EVENT = FieldConstant.EVENT_FIELD.getBytes();
 	public static final byte[] COLUMN_UID = FieldConstant.UID_FIELD.getBytes();
 	public static final byte[] COLUMN_GID = FieldConstant.GID_FIELD.getBytes();

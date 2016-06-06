@@ -35,6 +35,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
+import org.apache.storm.hbase.trident.state.HBaseState;
+import org.apache.storm.hbase.trident.state.HBaseStateFactory;
+import org.apache.storm.hbase.trident.state.HBaseUpdater;
+
 import com.echat.storm.analysis.constant.*;
 import com.echat.storm.analysis.types.*;
 import com.echat.storm.analysis.operation.*;
@@ -51,15 +55,15 @@ public class AnalysisTopology {
 				TopologyConstant.KAFKA_TOPIC,
 				TopologyConstant.ZOOKEEPER_PTTSVC_LOG_SPOUT_ID
 				);
-		spoutConf.scheme = new SchemeAsMultiScheme(new PttsvcLogInfoScheme());
+		spoutConf.scheme = new SchemeAsMultiScheme(new PttUserActionScheme());
 		spoutConf.startOffsetTime = kafka.api.OffsetRequest.LatestTime(); 
 		//spoutConf.ignoreZkOffsets = true;
 
 		Stream logStream = topology.newStream(TopologyConstant.SPOUT_INPUT,new OpaqueTridentKafkaSpout(spoutConf)).partitionBy(new Fields(FieldConstant.SERVER_FIELD)).parallelismHint(TopologyConstant.SPORT_INPUT_EXECUTORS); 
 
 		logStream.partitionPersist(
-				new HBaseStateFactory(new HBaseState.Options().withTableName(HBaseConstant.HBASE_LOG_TABLE).withMapper()),
-				PttSvcLog.newFields(),
+				new HBaseStateFactory(new HBaseState.Options().withTableName(HBaseConstant.USER_ACTION_TABLE).withMapper(new PttUserActionHBaseMapper())),
+				PttUserActionLog.newFields(),
 				new HBaseUpdater()
 				);
 		/*
