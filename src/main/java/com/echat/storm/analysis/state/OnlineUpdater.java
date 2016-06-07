@@ -31,7 +31,7 @@ import com.echat.storm.analysis.utils.*;
 public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 	private static final String TIMELINE_ONLINE = "online-";
 	private static final String TIMELINE_OFFLINE = "offline-";
-	private static final Logger log = LoggerFactory.getLogger(OnlineUpdater.class);
+	private static final Logger logger = LoggerFactory.getLogger(OnlineUpdater.class);
 
 
 	private HashSet<String>							_servers = new HashSet<String>();
@@ -49,7 +49,7 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 
 	@Override
 	public void updateState(BaseState state, List<TridentTuple> inputs,TridentCollector collector) {
-		log.info("updateState, input tuple count: " + inputs.size());
+		logger.info("updateState, input tuple count: " + inputs.size());
 
 		HashSet<String> newServer = new HashSet<String>();
 		HashSet<String> newDevice = new HashSet<String>();
@@ -97,7 +97,7 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 					} else if( EventConstant.EVENT_LOGOUT.equals(ev.event) ) {
 						processLogout(state,pipe,collector,ev);
 					} else {
-						log.error("Unknown event: " + ev.event);
+						logger.error("Unknown event: " + ev.event);
 					}
 				}
 			}
@@ -151,13 +151,13 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 					}
 				}
 			} else {
-				log.warn("Stale Login events,datetime: " + 
+				logger.warn("Stale Login events,datetime: " + 
 						ev.datetime + 
 						",last logout datetime: " + 
 						DateFormatUtils.format(new Date(state.getTimeline(TIMELINE_OFFLINE,ev.uid)),TopologyConstant.STD_DATETIME_FORMAT));
 			}
 		} else {
-			log.warn("Stale Login events,datetime: " + 
+			logger.warn("Stale Login events,datetime: " + 
 					ev.datetime +
 					",last login datetime: " + 
 						DateFormatUtils.format(new Date(state.getTimeline(TIMELINE_ONLINE,ev.uid)),TopologyConstant.STD_DATETIME_FORMAT));

@@ -4,10 +4,12 @@ public class RedisConstant {
 	static public final String ONLINE_USER_KEY = "online-user";
 	static public final String SERVER_SET_KEY = "server-set";
 	static public final String DEVICE_SET_KEY = "dev-set";
+	static public final String ONLINE_GROUP_KEY = "group-set";
 
 	static public final String SERVER_PREFIX = "server:";
 	static public final String DEVICE_PREFIX = "dev:";
 	static public final String USER_PREFIX = "user:";
+	static public final String GROUP_PREFIX = "group:";
 
 
 
@@ -19,6 +21,7 @@ public class RedisConstant {
 	static public final String LAST_LOGOUT_SUFFIX = ":last-logout";
 	static public final String SERVER_SET_SUFFIX = ":server-set";
 	static public final String DEVICE_SET_SUFFIX = ":dev-set";
+	static public final String GROUP_SUFFIX = ":group";
 
 	static public final String SESSION_LIST_SUFFIX = ":sessions";
 	static public final int SESSION_LIST_MAX_SIZE = 100;

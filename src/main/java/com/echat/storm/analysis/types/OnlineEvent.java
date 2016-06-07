@@ -6,7 +6,7 @@ import java.util.Comparator;
 import java.text.ParseException;
 
 import backtype.storm.tuple.Fields;
-import storm.trident.tuple.TridentTuple;
+import backtype.storm.tuple.ITuple;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
@@ -40,7 +40,7 @@ public class OnlineEvent {
 		return new Comparator<OnlineEvent>() {
 			@Override
 			public int compare(OnlineEvent e1,OnlineEvent e2) {
-				return e1.datetime.compareTo(e2.datetime);
+				return (int)(e1.getTimeStamp() - e2.getTimeStamp());
 			}
 
 			@Override
@@ -68,7 +68,7 @@ public class OnlineEvent {
 		);
 	}
 
-	static public OnlineEvent fromTuple(TridentTuple tuple) {
+	static public OnlineEvent fromTuple(ITuple tuple) {
 		OnlineEvent ev = new OnlineEvent();
 
 		ev.server = tuple.getString(0);

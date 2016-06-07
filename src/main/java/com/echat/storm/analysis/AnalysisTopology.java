@@ -95,6 +95,18 @@ public class AnalysisTopology {
 				BrokenEvent.newFields(),
 				new HBaseUpdater()
 				);
+
+		// update group information to redis
+		actionStream.each(
+				new Fields(FieldConstant.EVENT_FIELD),
+				new EventFilter(GroupUpdater.getGroupEvents())
+			)
+			.partitionPersist(
+				new BaseState.Factory(TopologyConstant.REDIS_CONFIG),
+				GroupEvent.newFields(),
+				new GroupUpdater()
+			);
+		
 		/*
 		// log level count
 		Stream loadStream = topology.merge(
