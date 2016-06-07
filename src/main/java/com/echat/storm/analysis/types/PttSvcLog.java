@@ -10,14 +10,17 @@ import backtype.storm.tuple.ITuple;
 import com.echat.storm.analysis.constant.FieldConstant;
 import com.echat.storm.analysis.constant.TopologyConstant;
 
-public class PttUserActionLog {
+public class PttSvcLog {
 	public String server;
 	public String datetime;
+	public String level;
+	public String content;
 	public String event;
 	public String uid;
 	public String gid;
 	public String company;
 	public String agent;
+	public String result;
 	public String ctx;
 	public String ip;
 	public String device;
@@ -39,11 +42,14 @@ public class PttUserActionLog {
 		return new Fields(
 				FieldConstant.SERVER_FIELD,
 				FieldConstant.DATETIME_FIELD,
+				FieldConstant.LEVEL_FIELD,
+				FieldConstant.CONTENT_FIELD,
 				FieldConstant.EVENT_FIELD,
 				FieldConstant.UID_FIELD,
 				FieldConstant.COMPANY_FIELD,
 				FieldConstant.AGENT_FIELD,
 				FieldConstant.GID_FIELD,
+				FieldConstant.RESULT_FIELD,
 				FieldConstant.CTX_FIELD,
 				FieldConstant.IP_FIELD,
 				FieldConstant.DEVICE_FIELD,
@@ -60,41 +66,46 @@ public class PttUserActionLog {
 					);
 	}
 	
-	static public PttUserActionLog fromTuple(ITuple tuple) {
-		PttUserActionLog log = new PttUserActionLog();
+	static public PttSvcLog fromTuple(ITuple tuple) {
+		PttSvcLog log = new PttSvcLog();
 		log.server = tuple.getString(0);
 		log.datetime = tuple.getString(1);
-		log.event = tuple.getString(2);
-		log.uid = tuple.getString(3);
-		log.gid = tuple.getString(4);
-		log.company = tuple.getString(5);
-		log.agent = tuple.getString(6);
-		log.ctx = tuple.getString(7);
-		log.ip = tuple.getString(8);
-		log.device = tuple.getString(9);
-		log.devid = tuple.getString(10);
-		log.version = tuple.getString(11);
-		log.imsi = tuple.getString(12);
-		log.expect_payload = tuple.getString(13);
-		log.target = tuple.getString(14);
-		log.target_got = tuple.getString(15);
-		log.target_dent = tuple.getString(16);
-		log.count = tuple.getString(17);
-		log.sw = tuple.getString(18);
-		log.value = tuple.getString(19);
+		log.level = tuple.getString(2);
+		log.content = tuple.getString(3);
+		log.event = tuple.getString(4);
+		log.uid = tuple.getString(5);
+		log.company = tuple.getString(6);
+		log.agent = tuple.getString(7);
+		log.gid = tuple.getString(8);
+		log.result = tuple.getString(9);
+		log.ctx = tuple.getString(10);
+		log.ip = tuple.getString(11);
+		log.device = tuple.getString(12);
+		log.devid = tuple.getString(13);
+		log.version = tuple.getString(14);
+		log.imsi = tuple.getString(15);
+		log.expect_payload = tuple.getString(16);
+		log.target = tuple.getString(17);
+		log.target_got = tuple.getString(18);
+		log.target_dent = tuple.getString(19);
+		log.count = tuple.getString(20);
+		log.sw = tuple.getString(21);
+		log.value = tuple.getString(22);
 		return log;
 	}
-
 
 	public Values toValues() {
 		return new Values(
 			server,
 			datetime,
+			level,
+			content,
 			event,
 			uid,
 			company,
 			agent,
 			gid,
+			result,
 			ctx,
 			ip,
 			device,

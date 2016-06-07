@@ -8,8 +8,8 @@ public class OnlineSession {
 	private static final Logger log = LoggerFactory.getLogger(OnlineSession.class);
 
 	public String			server;
-	public Date				login;
-	public Date				logout;
+	public String			login;
+	public String			logout;
 	public String			uid;
 	public String			ctx;
 	public String			ip;
@@ -20,15 +20,15 @@ public class OnlineSession {
 	public String			expect_pt;
 
 	static public OnlineSession create(OnlineEvent login,OnlineEvent logout) {
-		if( ! login.server.equals(logout.server) || !login.uid.equals(logout.uid) || login.date.after(logout.date) ) {
+		if( ! login.server.equals(logout.server) || !login.uid.equals(logout.uid) || login.getTimeStamp() > logout.getTimeStamp() ) {
 			log.error("Bad login/logout event pair!");
 			return null;
 		}
 
 		OnlineSession session = new OnlineSession();
 		session.server = login.server;
-		session.login = login.date;
-		session.logout = logout.date;
+		session.login = login.datetime;
+		session.logout = logout.datetime;
 		session.uid = login.uid;
 		session.ctx = login.ctx;
 		session.ip = login.ip;

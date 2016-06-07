@@ -7,7 +7,6 @@ public class FieldConstant {
 	public static final String BUCKET_FIELD = "bucket";
 
 	public static final String DATETIME_FIELD = "dt";
-	public static final String TIMESTAMP_FIELD = "ts";
 	public static final String LEVEL_FIELD = "level";
 	public static final String CONTENT_FIELD = "content";
 
@@ -34,5 +33,6 @@ public class FieldConstant {
 
 	public static final String LOAD_FIELD = "load";
 	public static final String SERVER_LOAD_FIELD = "server-load";
-	public static final String BROKEN_EVENT_FIELD = "broken-event";
+	public static final String OFFLINE_TIME_FIELD = "offtime";
+
 }

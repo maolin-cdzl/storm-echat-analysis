@@ -24,15 +24,14 @@ public class EventFilter extends BaseFilter {
 
 	@Override
 	public boolean isKeep(TridentTuple tuple) {
-		if( events == null || events.length == 0 ) {
-			log.error("Event list is null or empty");
-			return false;
-		}
-		final String curEv = tuple.getStringByField(FieldConstant.EVENT_FIELD);
-
-		for(String ev : events) {
-			if( ev.equals(curEv) ) {
-				return true;
+		if( tuple.contains(FieldConstant.EVENT_FIELD) ) {
+			final String event = tuple.getStringByField(FieldConstant.EVENT_FIELD);
+			if( event != null ) {
+				for(String ev : events) {
+					if( ev.equals(event) ) {
+						return true;
+					}
+				}
 			}
 		}
 		return false;

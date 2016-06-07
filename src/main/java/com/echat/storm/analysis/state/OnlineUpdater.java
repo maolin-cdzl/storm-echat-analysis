@@ -1,7 +1,9 @@
 package com.echat.storm.analysis.state;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -32,15 +34,41 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 	private static final Logger log = LoggerFactory.getLogger(OnlineUpdater.class);
 
 
+	private HashSet<String>							_servers = new HashSet<String>();
+	private HashSet<String>							_devices = new HashSet<String>();
 	private HashMap<String,List<OnlineEvent>>		_events = new HashMap<String,List<OnlineEvent>>();
+
+	static public String[] getOnlineEvents() {
+		return new String[] {
+			EventConstant.EVENT_LOGIN,
+			EventConstant.EVENT_RELOGIN,
+			EventConstant.EVENT_BROKEN,
+			EventConstant.EVENT_LOGOUT
+		};
+	}
 
 	@Override
 	public void updateState(BaseState state, List<TridentTuple> inputs,TridentCollector collector) {
 		log.info("updateState, input tuple count: " + inputs.size());
+
+		HashSet<String> newServer = new HashSet<String>();
+		HashSet<String> newDevice = new HashSet<String>();
+
 		for(TridentTuple tuple : inputs) {
 			OnlineEvent ev = OnlineEvent.fromTuple(tuple);
 			if( ev != null ) {
 				put(ev);
+
+				if( ! _servers.contains(ev.server) ) {
+					newServer.add(ev.server);
+					_servers.add(ev.server);
+				}
+				if( ev.device != null ) {
+					if( ! _devices.contains(ev.device) ) {
+						newDevice.add(ev.device);
+						_devices.add(ev.device);
+					}
+				}
 			}
 		}
 
@@ -48,6 +76,16 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 		try {
 			jedis = state.getJedis();
 			Pipeline pipe = jedis.pipelined();
+
+			if( ! newServer.isEmpty() ) {
+				for(String server: newServer) {
+					pipe.sadd(RedisConstant.SERVER_SET_KEY,server);
+				}
+				for(String device: newDevice) {
+					pipe.sadd(RedisConstant.DEVICE_SET_KEY,device);
+				}
+				pipe.sync();
+			}
 			for (List<OnlineEvent> l : _events.values() ) {
 				for(OnlineEvent ev : l) {
 					if( EventConstant.EVENT_LOGIN.equals(ev.event) ) {
@@ -62,8 +100,8 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 						log.error("Unknown event: " + ev.event);
 					}
 				}
-				pipe.sync();
 			}
+			pipe.sync();
 		} finally {
 			if( jedis != null ) {
 				state.returnJedis(jedis);
@@ -75,17 +113,17 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 	private void put(OnlineEvent ev) {
 		List<OnlineEvent> l = _events.get(ev.uid);
 		if( l == null ) {
-			l = new SortedLinkedList<OnlineEvent>(OnlineEvent.tsComparator());
+			l = new SortedLinkedList<OnlineEvent>(OnlineEvent.dateComparator());
 			_events.put(ev.uid,l);
 		}
 		l.add(ev);
 	}
 
 	private void processLogin(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
-		if( state.updateTimeline(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
+		if( state.updateTimeline(TIMELINE_ONLINE,ev.uid,ev.getTimeStamp()) ) {
 			String content = state.getGson().toJson(ev);
 			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGIN_SUFFIX,content);
-			if( !state.isTooOld(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
+			if( !state.isTooOld(TIMELINE_OFFLINE,ev.uid,ev.getTimeStamp()) ) {
 				setUserOnline(state,pipe,collector,ev);
 
 				String lastLogoutJson = null;
@@ -103,63 +141,60 @@ public class OnlineUpdater extends BaseStateUpdater<BaseState> {
 					OnlineEvent lastLogout = state.getGson().fromJson(lastLogoutJson,OnlineEvent.class);
 					if( lastLogout != null ) {
 						if( EventConstant.EVENT_BROKEN.equals(ev.event) ) {
-							if( ev.date.after(lastLogout.date) ) {
-							   	long offtime = TimeUnit.MILLISECONDS.toSeconds(ev.date.getTime() - lastLogout.date.getTime());
+							if( ev.getTimeStamp() > lastLogout.getTimeStamp() ) {
+							   	long offtime = TimeUnit.MILLISECONDS.toSeconds(ev.getTimeStamp() - lastLogout.getTimeStamp());
 								if( offtime < 300 ) {
-									BrokenEvent broken = BrokenEvent.create(ev,offtime);
-									stormAndEmitConnectionBroken(state,pipe,collector,broken);
+									collector.emit(BrokenEvent.create(ev,offtime).toValues());
 								}
 							}
 						}
 					}
 				}
 			} else {
-				log.warn("Stale Login events,ts: " + ev.ts + ", logout ts: " + state.getTimeline(TIMELINE_OFFLINE,ev.uid));
+				log.warn("Stale Login events,datetime: " + 
+						ev.datetime + 
+						",last logout datetime: " + 
+						DateFormatUtils.format(new Date(state.getTimeline(TIMELINE_OFFLINE,ev.uid)),TopologyConstant.STD_DATETIME_FORMAT));
 			}
 		} else {
-			log.warn("Stale Login events,ts: " + ev.ts + ", login ts: " + state.getTimeline(TIMELINE_ONLINE,ev.uid));
+			log.warn("Stale Login events,datetime: " + 
+					ev.datetime +
+					",last login datetime: " + 
+						DateFormatUtils.format(new Date(state.getTimeline(TIMELINE_ONLINE,ev.uid)),TopologyConstant.STD_DATETIME_FORMAT));
 		}
 	}
 
 	private void processRelogin(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
 		if( state.timelineBefore(ev.uid,TIMELINE_ONLINE,TIMELINE_OFFLINE) &&
-			state.updateTimeline(TIMELINE_ONLINE,ev.uid,ev.ts)  &&
-			!state.isTooOld(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
+			state.updateTimeline(TIMELINE_ONLINE,ev.uid,ev.getTimeStamp())  &&
+			!state.isTooOld(TIMELINE_OFFLINE,ev.uid,ev.getTimeStamp()) ) {
 			String content = state.getGson().toJson(ev);
 			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGIN_SUFFIX,content);
 			setUserOnline(state,pipe,collector,ev);
 		}
 
-		BrokenEvent broken = BrokenEvent.create(ev,0);
-		stormAndEmitConnectionBroken(state,pipe,collector,broken);
+		collector.emit(BrokenEvent.create(ev,0).toValues());
 	}
 
 	private void processBroken(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
-		if( state.updateTimeline(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
+		if( state.updateTimeline(TIMELINE_OFFLINE,ev.uid,ev.getTimeStamp()) ) {
 			String content = state.getGson().toJson(ev);
 			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGOUT_SUFFIX,content);
 
-			if( ! state.isTooOld(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
+			if( ! state.isTooOld(TIMELINE_ONLINE,ev.uid,ev.getTimeStamp()) ) {
 				setUserOffline(state,pipe,collector,ev);
 			}
 		}
 	}
 
 	private void processLogout(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {
-		if( state.updateTimeline(TIMELINE_OFFLINE,ev.uid,ev.ts) ) {
+		if( state.updateTimeline(TIMELINE_OFFLINE,ev.uid,ev.getTimeStamp()) ) {
 			String content = state.getGson().toJson(ev);
 			pipe.set(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.LAST_LOGOUT_SUFFIX,content);
-			if( ! state.isTooOld(TIMELINE_ONLINE,ev.uid,ev.ts) ) {
+			if( ! state.isTooOld(TIMELINE_ONLINE,ev.uid,ev.getTimeStamp()) ) {
 				setUserOffline(state,pipe,collector,ev);
 			}
 		}
-	}
-
-	private void stormAndEmitConnectionBroken(BaseState state,Pipeline pipe,TridentCollector collector,BrokenEvent ev) {
-		String content = state.getGson().toJson(ev);
-		pipe.lpush(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.BROKEN_LIST_SUFFIX,content);
-		pipe.ltrim(RedisConstant.USER_PREFIX + ev.uid + RedisConstant.BROKEN_LIST_SUFFIX,0,RedisConstant.BROKEN_LIST_MAX_SIZE);
-		collector.emit(new Values(content));
 	}
 
 	private void setUserOnline(BaseState state,Pipeline pipe,TridentCollector collector,OnlineEvent ev) {

@@ -6,6 +6,7 @@ public class TopologyConstant {
 	// debug
 	public static final boolean DEBUG = true;
 	public static final String STD_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
+	public static final String[] STD_INPUT_DATETIME_FORMAT = new String[] { "yyyy-MM-dd HH:mm:ss.SSS" };
 	public static final String[] INPUT_DATETIME_FORMAT = new String[] { 
 		"yyyy-MM-dd HH:mm:ss.SSS",
 		"yyyy/MM/dd HH:mm:ss",

@@ -11,31 +11,36 @@ import org.apache.oro.text.regex.Perl5Matcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
  
+import org.apache.commons.lang.time.DateUtils;
+import org.apache.commons.lang.time.DateFormatUtils;
+
 import backtype.storm.spout.Scheme;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
 
+import java.util.Date;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.text.ParseException;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 
 import com.echat.storm.analysis.constant.FieldConstant;
 import com.echat.storm.analysis.constant.EventConstant;
 import com.echat.storm.analysis.constant.TopologyConstant;
-import com.echat.storm.analysis.types.PttUserActionLog;
+import com.echat.storm.analysis.types.PttSvcLog;
 import com.echat.storm.analysis.utils.GetKeyValues;
 import com.echat.storm.analysis.utils.UserOrgInfoReader;
 import com.echat.storm.analysis.utils.UserOrgInfoReader.OrganizationInfo;
 
 
-public class PttUserActionScheme implements Scheme {
-	private static final Logger logger = LoggerFactory.getLogger(PttUserActionScheme.class);
+public class PttLogScheme implements Scheme {
+	private static final Logger logger = LoggerFactory.getLogger(PttLogScheme.class);
 
 	private interface EventParser extends Serializable {
-		boolean parse(PttUserActionLog log,Map<String,String> keys);
+		boolean parse(PttSvcLog log,Map<String,String> keys);
 	}
 
 	private static final String BASE_PATTERN = "^(\\w+)\\s+(\\d{4}[/:\\.\\-\\\\]\\d{2}[/:\\.\\-\\\\]\\d{2}\\s\\d{2}:\\d{2}:\\d{2})\\.(\\d+)\\s(\\w+)[^\"]*\"([^\"]+)\"";
@@ -82,6 +87,49 @@ public class PttUserActionScheme implements Scheme {
 		{"POST WORKSHEET",EventConstant.EVENT_WORKSHEET_POST}
 	};
 
+	static public String[] getUserActionEvents() {
+		return new String[] {
+			EventConstant.EVENT_GET_MIC,
+			EventConstant.EVENT_RELEASE_MIC,
+			EventConstant.EVENT_DENT_MIC,
+			EventConstant.EVENT_LOSTMIC_REPLACE,
+			EventConstant.EVENT_LOSTMIC_AUTO,
+			EventConstant.EVENT_RELOGIN,
+			//EventConstant.EVENT_LOGIN_FAILED,		// login failed is not a user action
+			EventConstant.EVENT_LOGIN,
+			EventConstant.EVENT_BROKEN,
+			EventConstant.EVENT_LOGOUT,
+			EventConstant.EVENT_QUERY_MEMBERS,
+			EventConstant.EVENT_QUERY_GROUP,
+			EventConstant.EVENT_QUERY_CONTACT,
+			EventConstant.EVENT_QUERY_DEPARTMENT,
+			EventConstant.EVENT_QUERY_ENTERPISE_GROUP,
+			EventConstant.EVENT_QUERY_USER,
+			EventConstant.EVENT_JOIN_GROUP,
+			EventConstant.EVENT_LEAVE_GROUP,
+			EventConstant.EVENT_CALL,
+			EventConstant.EVENT_QUICKDIAL,
+			EventConstant.EVENT_CHANGE_NAME,
+			EventConstant.EVENT_CHANGE_PWD_FAILED,
+			EventConstant.EVENT_CHANGE_PWD,
+			EventConstant.EVENT_CONTACT_REQ,
+			EventConstant.EVENT_CONTACT_REP,
+			EventConstant.EVENT_CONTACT_RM,
+			EventConstant.EVENT_DISPATCH,
+			EventConstant.EVENT_CONFIG,
+			EventConstant.EVENT_TAKE_MIC,
+			EventConstant.EVENT_CREATE_GROUP,
+			EventConstant.EVENT_RM_GROUP,
+			EventConstant.EVENT_EMPOWER_FAILED,
+			EventConstant.EVENT_EMPOWER,
+			EventConstant.EVENT_DEPRIVE_FAILED,
+			EventConstant.EVENT_DEPRIVE,
+			EventConstant.EVENT_CHANGE_GROUP_NAME_FAILED,
+			EventConstant.EVENT_CHANGE_GROUP_NAME,
+			EventConstant.EVENT_WORKSHEET_POST
+		};
+	}
+
 	static private HashMap<String,EventParser> EVENT_PARSER_MAP = createEventParserMap();
 
 	private Pattern basePattern = null;
@@ -89,7 +137,7 @@ public class PttUserActionScheme implements Scheme {
 	private GetKeyValues reg = null;
 	private UserOrgInfoReader orgReader = null;
 
-	public PttUserActionScheme() {
+	public PttLogScheme() {
 		PatternCompiler compiler = new Perl5Compiler();
 		try {
 			this.basePattern = compiler.compile(BASE_PATTERN);
@@ -102,7 +150,7 @@ public class PttUserActionScheme implements Scheme {
 
 	@Override
 	public Fields getOutputFields() {
-		return PttUserActionLog.newFields();
+		return PttSvcLog.newFields();
 	}
 
 	@Override
@@ -115,46 +163,59 @@ public class PttUserActionScheme implements Scheme {
 			return null;
 		}
 
-		PttUserActionLog log = new PttUserActionLog();
-		String content = baseParse(log,line);
-		if( content != null ) {			// promise event != null
+		PttSvcLog log = new PttSvcLog();
+		if( ! baseParse(log,line) ) {
+			return null;
+		}
+		if( log.event != null ) {
 			EventParser p = EVENT_PARSER_MAP.get(log.event);
 			if( p != null ) {
-				Map<String,String> keys = reg.getKeys(content);
-				if( p.parse(log,keys) ) {		// promise uid != null
+				Map<String,String> keys = reg.getKeys(log.content);
+				if( ! p.parse(log,keys) ) {
+					return null;
+				}
+				if( log.uid != null ) {
 					OrganizationInfo org = orgReader.search(log.uid);
 					if( org != null ) {
 						log.company = org.company;
 						log.agent = org.agent;
 					}
-					return log.toValues();
 				}
 			}
 		}
-		return null;
+		return log.toValues();
 	}
 
-	private String baseParse(PttUserActionLog log,String line) {
+	private boolean baseParse(PttSvcLog log,String line) {
 		if( pm.contains(line,basePattern) ) {
 			MatchResult mr = pm.getMatch();
 			log.server = mr.group(1);
-			log.datetime = mr.group(2);
-			try {
-				log.timestamp = Long.parseLong(mr.group(3)) / 100L;
-			} catch( NumberFormatException e ) {
-				return null;
-			}
-			String level = mr.group(4);
-			String content = mr.group(5);
 
-			if( level.equals("INFO") ) {
+			// because current log time has no milliseconds!
+			try {
+				Date date = DateUtils.parseDate(mr.group(2),TopologyConstant.INPUT_DATETIME_FORMAT);
+				Long millis = (Long.parseLong(mr.group(3)) / 100L) % 1000;
+				log.datetime = DateFormatUtils.format(new Date(date.getTime() + millis),TopologyConstant.STD_DATETIME_FORMAT);
+			} catch( ParseException e ) {
+				logger.error("Bad datetime format");
+				return false;
+			} catch( NumberFormatException e ) {
+				logger.error("Timestamp is not a long integer");
+				return false;
+			}
+			log.level = mr.group(4);
+			log.content = mr.group(5);
+
+			//logger.debug("Kafka tuple: " + entity + "\t" + datetime + "\t" + level + "\t" + content);
+			
+			if( log.level.equals("INFO") ) {
 				for(int i=0; i < LOG_PREFIX_TO_EVENT.length; i++) {
-					if( content.startsWith(LOG_PREFIX_TO_EVENT[i][0]) ) {
+					if( log.content.startsWith(LOG_PREFIX_TO_EVENT[i][0]) ) {
 						// split CONFIG event to audio/location sw event
 						if( LOG_PREFIX_TO_EVENT[i][1].equals(EventConstant.EVENT_CONFIG) ) {
-							if( content.contains("audio") ) {
+							if( log.content.contains("audio") ) {
 								log.event = EventConstant.EVENT_SW_AUDIO;
-							} else if( content.contains("location") ) {
+							} else if( log.content.contains("location") ) {
 								log.event = EventConstant.EVENT_SW_GPS;
 							}
 						} else {
@@ -163,13 +224,12 @@ public class PttUserActionScheme implements Scheme {
 						break;
 					}
 				}
-				
-				if( log.event != null ) {
-					return content;
-				}
+				return log.event != null;
+			} else {
+				return true;
 			}
 		}
-		return null;
+		return false;
 	}
 
 	static private HashMap<String,EventParser> createEventParserMap() {
@@ -177,10 +237,13 @@ public class PttUserActionScheme implements Scheme {
 
 		EventParser loginParser = new EventParser() {
 			@Override
-			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
+			public boolean parse(PttSvcLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				if( log.uid == null ) {
-					return false;
+					log.uid = keys.get("account");
+					if( log.uid == null ) {
+						return false;
+					}
 				}
 				log.ctx = keys.get("context");
 				log.ip = keys.get("address");
@@ -205,7 +268,7 @@ public class PttUserActionScheme implements Scheme {
 
 		EventParser logoutParser = new EventParser() {
 			@Override
-			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
+			public boolean parse(PttSvcLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.ip = keys.get("address");
 				return ( log.uid != null );
@@ -216,7 +279,7 @@ public class PttUserActionScheme implements Scheme {
 
 		EventParser speakParser = new EventParser() {
 			@Override
-			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
+			public boolean parse(PttSvcLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.gid = keys.get("gid");
 				log.target = keys.get("target");
@@ -232,7 +295,7 @@ public class PttUserActionScheme implements Scheme {
 		
 		EventParser groupParser = new EventParser() {
 			@Override
-			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
+			public boolean parse(PttSvcLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.gid = keys.get("gid");
 				return ( log.uid != null && log.gid != null );
@@ -243,7 +306,7 @@ public class PttUserActionScheme implements Scheme {
 
 		EventParser callParser = new EventParser() {
 			@Override
-			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
+			public boolean parse(PttSvcLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.target = keys.get("targets");
 				log.target_got = keys.get("called");
@@ -256,7 +319,7 @@ public class PttUserActionScheme implements Scheme {
 
 		EventParser queryParser = new EventParser() {
 			@Override
-			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
+			public boolean parse(PttSvcLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.count = keys.get("count");
 				log.target = keys.get("gids");
@@ -276,7 +339,7 @@ public class PttUserActionScheme implements Scheme {
 
 		EventParser profileParser = new EventParser() {
 			@Override
-			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
+			public boolean parse(PttSvcLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				if( EventConstant.EVENT_CHANGE_NAME.equals(log.event) ) {
 					log.target_got = keys.get("name");
@@ -310,7 +373,7 @@ public class PttUserActionScheme implements Scheme {
 
 		EventParser manageParser = new EventParser() {
 			@Override
-			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
+			public boolean parse(PttSvcLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 
 				if( EventConstant.EVENT_DISPATCH.equals(log.event) ) {
@@ -378,7 +441,7 @@ public class PttUserActionScheme implements Scheme {
 		
 		EventParser worksheetParser = new EventParser() {
 			@Override
-			public boolean parse(PttUserActionLog log,Map<String,String> keys) {
+			public boolean parse(PttSvcLog log,Map<String,String> keys) {
 				log.uid = keys.get("uid");
 				log.target = keys.get("target");
 				log.count = keys.get("msgcount");
